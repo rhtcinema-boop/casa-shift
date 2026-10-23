@@ -404,6 +404,38 @@ table.grid{border-collapse:separate;border-spacing:0;font-family:var(--num);font
 .stats .v{font-family:var(--num);font-weight:600;font-size:14px}
 .stats .v.neg{color:var(--danger)}
 .pats{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,600px),1fr));gap:12px}
+.tgtabs{display:flex;gap:4px;flex-wrap:wrap;align-items:flex-end;border-bottom:2px solid #c9ced6;padding:0 4px;margin-bottom:-12px}
+.tgtab{border:1px solid #c9ced6;border-bottom:0;background:#eef0f3;border-radius:8px 8px 0 0;padding:8px 16px;font-weight:600;font-size:14px;display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;color:#3a3a3c;margin-bottom:-2px}
+.tgtab small{font-weight:400;font-size:11px;color:#6e6e73}
+.tgtab.on{background:#fff;color:#107c41;border-color:#107c41;border-bottom:2px solid #fff}
+.tgtab.add{font-size:20px;padding:6px 14px;color:#107c41}
+.tgcard{border-top-left-radius:0!important}
+.tgset label{font-size:12px}
+.sswrap{overflow-x:auto;border:1px solid #c9ced6;border-radius:6px;background:#fff}
+table.ss{border-collapse:separate;border-spacing:0;font-family:var(--num);font-variant-numeric:tabular-nums;user-select:none;touch-action:none}
+table.ss th,table.ss td{padding:0;height:28px;border-right:1px solid #e2e5ea;border-bottom:1px solid #e2e5ea;font-size:13px;text-align:center;white-space:nowrap}
+table.ss thead th{background:#f3f4f6;color:#3a3a3c;font-weight:600;position:sticky;top:0;z-index:2}
+table.ss th.hh{font-size:11px;text-align:left;padding-left:3px;border-left:1px solid #b9bec7;min-width:36px}
+table.ss.tb th.hh{min-width:30px}
+table.ss .sx{position:sticky;background:#f8f9fb;z-index:1}
+table.ss thead .sx{z-index:3;background:#f3f4f6}
+table.ss .no{left:0;width:38px;min-width:38px;color:#6e6e73}
+table.ss .in{left:38px;width:62px;min-width:62px}
+table.ss .out{left:100px;width:62px;min-width:62px}
+table.ss .hr{left:162px;width:46px;min-width:46px;border-right:2px solid #8e8e93!important;color:#3a3a3c;font-weight:600}
+table.ss.tb .rate{left:38px;width:84px;min-width:84px}
+table.ss.tb .in{left:122px}table.ss.tb .out{left:184px}table.ss.tb .hr{left:246px}
+table.ss input.ssi{width:100%;height:27px;border:0;background:var(--input);text-align:center;font:inherit;font-size:14px;font-weight:600;padding:0;border-radius:0;outline:none}
+table.ss input.ssi:focus{box-shadow:inset 0 0 0 2px #107c41;background:#fff}
+table.ss select.sss{width:100%;height:27px;border:0;background:var(--input);font:inherit;font-size:13px;padding:0 4px}
+table.ss td.pc{width:18px;min-width:18px;cursor:pointer;background:#fff}
+table.ss.tb td.pc{width:30px;min-width:30px}
+table.ss td.pc.h{border-right-color:#c3c8d0}
+table.ss td.pc.on{background:var(--bar)}table.ss td.pc.night.on{background:#2db34a}table.ss td.pc.tb.on{background:#7fb2f0}
+table.ss tfoot td{background:#f3f4f6;font-size:12px;color:#3a3a3c}
+table.ss tfoot td.sx{text-align:left;padding:0 8px;font-weight:600}
+table.ss tfoot td.cnt.z{color:#c3c8d0}
+.btn.tiny{padding:1px 8px;font-size:11px;margin-left:6px}
 .savest{font-size:11px;color:var(--muted)}
 .issue{display:flex;flex-direction:column;gap:3px;border-bottom:1px solid var(--line);padding:8px 0;font-size:13.5px}
 .issue .d{font-weight:700}
@@ -3112,9 +3144,10 @@ function renderCheck() {
 // ---------- 指標 screen ----------
 let saveT = null, saveState = '';
 function scheduleSave() { saveState = '未保存…'; const el = $('#saveState'); if (el) el.textContent = saveState; clearTimeout(saveT); saveT = setTimeout(async () => { await store.saveConfig(config); saveState = '保存済み'; const el2 = $('#saveState'); if (el2) el2.textContent = saveState; }, 700); }
+let tgPat = 0, tgForce = false, tgFocus = null; const tgPending = {}; /* 指標: 表示中のパターン・再描画後に戻すセル・片方だけ打った時刻 */
 function renderTargets() {
   const box = $('#targetsInner'); const tg = targets();
-  if (box.contains(document.activeElement) && document.activeElement.tagName !== 'BODY') return;
+  if (box.contains(document.activeElement) && document.activeElement.tagName !== 'BODY' && !tgForce) return; tgForce = false;
   const calcs = tg.patterns.map(p => patCalc(p)); const ro = !canW();
   const sum = f => calcs.reduce((a, c) => a + c[f], 0);
   let h = `<div class="row"><h2>${esc(storeName())} シフト指標・人件費/レーキ試算</h2><span class="savest" id="saveState">${saveState}</span><span class="spacer"></span><button class="btn small" id="tgBack">シフト表へ戻る</button></div>
@@ -3137,30 +3170,35 @@ function renderTargets() {
   <tr><td>営業日数/月（採用値）</td>${calcs.map(c => `<td class="n calc">${c.days.used}</td>`).join('')}<td class="n calc">${Math.round(calcs.reduce((a, c) => a + c.days.used, 0) * 10) / 10}</td></tr></tbody></table></div>
   <h3>日次サマリー（1日あたり）</h3><div style="overflow-x:auto"><table><thead><tr><th>項目</th>${names.map(n => `<th class="n">${esc(n)}</th>`).join('')}<th></th></tr></thead><tbody>
   ${dayRow('売上（レーキ総額）', 'rakeDay')}${dayRow('ボーナス', 'bonusDay')}${dayRow('レーキ（ボーナス差引後）', 'netDay')}${dayRow('人件費（交通費込み）', 'laborDay')}${dayRow('粗利', 'profitDay', true)}</tbody></table></div></div>`;
-  h += '<div class="pats">';
-  tg.patterns.forEach((p, pi) => {
-    const c = calcs[pi];
-    h += `<div class="card" data-p="${pi}"><div class="row"><label>パターン${pi + 1} 名前<input type="text" class="inp" data-pf="name" value="${esc(p.name)}" placeholder="パターン${pi + 1}" style="width:120px"></label>
+  if (tgPat >= tg.patterns.length) tgPat = tg.patterns.length - 1; if (tgPat < 0) tgPat = 0;
+  /* パターンはスプシのシートのようにタブで切り替える（オーナー指示 2026-10-24「スプシに近づけて」） */
+  h += '<div class="tgtabs">' + tg.patterns.map((p, i) => `<button class="tgtab ${i === tgPat ? 'on' : ''}" data-tgp="${i}">${esc(patName(p, i))}<small>${WD.filter((w, d) => p.days[d]).join('') || '曜日なし'}</small></button>`).join('') + '<button class="tgtab add" id="patAdd" title="パターンを追加">＋</button></div>';
+  { const p = tg.patterns[tgPat], pi = tgPat, c = calcs[pi]; const pend = k => tgPending[pi + '|' + k];
+    h += `<div class="card tgcard" data-p="${pi}"><div class="row tgset"><label>名前<input type="text" class="inp" data-pf="name" value="${esc(p.name)}" placeholder="パターン${pi + 1}" style="width:130px"></label>
       <label>使う曜日<span class="chips">${WD.map((w, d) => `<button class="chip ${p.days[d] ? 'on' : ''} ${d === 0 || d === 6 ? 'we' : ''}" data-dow="${d}">${w}</button>`).join('')}</span></label>
-      <label>営業日数/月 <span class="hint">自動 ${c.days.auto}</span><input type="number" class="inp" data-pf="daysOverride" step="0.1" value="${p.daysOverride ?? ''}" placeholder="${c.days.auto}" title="特定の月に合わせたい時だけ入力（空欄で自動）"></label>
-      <label>深夜稼働率 %<input type="number" class="inp" data-pf="nightUtil" step="5" value="${Math.round((p.nightUtil ?? 1) * 100)}"></label>
-      <label>ボーナス/日<input type="number" class="inp" data-pf="bonus" value="${p.bonus || 0}"></label><span class="spacer"></span><button class="btn small danger" data-pdel="${pi}" ${tg.patterns.length > 1 ? '' : 'disabled'}>このパターンを削除</button></div>`;
-    h += `<h3>人件費（30分刻み 6:00〜31:00）<span class="hint" style="font-weight:400;margin-left:8px">右端に「17-25」のように入れると間が自動で塗られます（手で塗ってもOK）。深夜（${tg.nightFrom}時〜）は濃い緑</span></h3><div class="pgrid"><div class="pg" style="grid-template-columns:52px repeat(${TSLOTS},var(--pc)) auto" data-grid="staff">`;
-    h += '<div class="lab"></div>'; for (let i = 0; i < TSLOTS; i += 2) h += `<div class="hl sp2">${T0 + i / 2}</div>`; h += '<div></div>';
-    p.staff.forEach((row, r) => { h += `<div class="lab">バイト${r + 1}</div>`; row.forEach((on, i) => { const t = T0 + i / 2; h += `<div class="pc ${on ? 'on' : ''} ${t >= tg.nightFrom ? 'night' : ''} ${i % 2 ? 'h' : ''}" data-r="${r}" data-i="${i}" title="${hhmm(t)}"></div>`; }); const hrs = row.filter(Boolean).length / 2; h += `<div class="rh"><input type="text" class="rng" data-rng="${r}" value="${rangeTxt(row)}" placeholder="17-25" title="入り-終わり（例 17.5-25）を入れると間が塗られます。空にすると消えます">${hrs ? hrs + 'h' : ''}</div>`; });
-    h += '<div class="lab rs">枠人数</div>'; c.cnt.forEach(n => { h += `<div class="cnt ${n ? '' : 'z'}">${n}</div>`; }); h += '<div></div>';
-    h += '<div class="lab rs">枠経費</div>'; c.slotCost.forEach(v => { h += `<div class="cnt ${v ? '' : 'z'}" title="${yen(v)}">${v ? Math.round(v / 100) : 0}</div>`; }); h += '<div class="rh">×100円</div>';
-    h += '</div></div>';
+      <label>営業日数/月 <span class="hint">自動 ${c.days.auto}</span><input type="number" class="inp" data-pf="daysOverride" step="0.1" value="${p.daysOverride ?? ''}" placeholder="${c.days.auto}" style="width:80px"></label>
+      <label>深夜稼働率 %<input type="number" class="inp" data-pf="nightUtil" step="5" value="${Math.round((p.nightUtil ?? 1) * 100)}" style="width:80px"></label>
+      <label>ボーナス/日<input type="number" class="inp" data-pf="bonus" value="${p.bonus || 0}" style="width:100px"></label><span class="spacer"></span><button class="btn small danger" data-pdel="${pi}" ${tg.patterns.length > 1 ? '' : 'disabled'}>このパターンを削除</button></div>`;
+    // 人件費の表
+    const sRange = row => { let a = -1, b = -1; row.forEach((on, i) => { if (on) { if (a < 0) a = i; b = i; } }); return a < 0 ? ['', ''] : [T0 + a / 2, T0 + (b + 1) / 2]; };
+    h += `<h3>人件費 <span class="hint">入り・終わりを打つ（17.5＝17時半、25＝翌1時）か、右の帯をドラッグで塗る。Enter で下へ、Tab で右へ。深夜（${tg.nightFrom}時〜）は濃い緑</span></h3><div class="sswrap"><table class="ss" data-grid="staff"><thead><tr><th class="sx no">No</th><th class="sx in">入り</th><th class="sx out">終わり</th><th class="sx hr">時間</th>`;
+    for (let i = 0; i < TSLOTS; i += 2) h += `<th class="hh" colspan="2">${T0 + i / 2}</th>`; h += '</tr></thead><tbody>';
+    p.staff.forEach((row, r) => { const [a, b] = sRange(row); const hrs = row.filter(Boolean).length / 2; const pa = pend('s' + r + 's'), pb = pend('s' + r + 'e');
+      h += `<tr><td class="sx no">${r + 1}</td><td class="sx in"><input class="ssi" inputmode="decimal" data-g="s" data-r="${r}" data-c="s" value="${pa ?? a}"></td><td class="sx out"><input class="ssi" inputmode="decimal" data-g="s" data-r="${r}" data-c="e" value="${pb ?? b}"></td><td class="sx hr">${hrs ? hrs : ''}</td>`;
+      row.forEach((on, i) => { const t = T0 + i / 2; h += `<td class="pc ${on ? 'on' : ''} ${t >= tg.nightFrom ? 'night' : ''} ${i % 2 ? 'h' : ''}" data-r="${r}" data-i="${i}" title="${hhmm(t)}"></td>`; }); h += '</tr>'; });
+    h += `</tbody><tfoot><tr class="sum"><td class="sx" colspan="4">枠人数 <button class="btn tiny" id="rowAdd" title="行を追加">＋行</button></td>${c.cnt.map(n => `<td class="cnt ${n ? '' : 'z'}">${n}</td>`).join('')}</tr>
+      <tr class="sum"><td class="sx" colspan="4">枠経費（×100円）</td>${c.slotCost.map(v => `<td class="cnt ${v ? '' : 'z'}" title="${yen(v)}">${v ? Math.round(v / 100) : 0}</td>`).join('')}</tr></tfoot></table></div>`;
     h += `<div class="stats"><div><span class="k">日次給与</span><span class="v">${yen(c.wageDay)}</span></div><div><span class="k">出勤人数</span><span class="v">${c.workers}人</span></div><div><span class="k">交通費</span><span class="v">${yen(c.fare)}</span></div><div><span class="k">日次人件費合計</span><span class="v">${yen(c.laborDay)}</span></div><div><span class="k">月次人件費</span><span class="v">${yen(c.laborMonth)}</span></div></div>`;
-    h += `<h3>レーキ（1時間刻み 6:00〜31:00）<span class="hint" style="font-weight:400;margin-left:8px">卓ごとにレートを選び、開いている時間を塗る。${tg.utilFrom}時以降は深夜稼働率を乗算</span></h3><div class="pgrid"><div class="pg" style="grid-template-columns:118px repeat(${THOURS},calc(var(--pc) * 2)) auto" data-grid="tables">`;
-    h += '<div class="lab">時刻</div>'; for (let hh = 0; hh < THOURS; hh++) h += `<div class="hl">${T0 + hh}</div>`; h += '<div></div>';
-    for (let j = 0; j < NTABLES; j++) { h += `<div class="lab">卓${j + 1} <select data-tr="${j}"><option value="">—</option>${tg.rates.map(r => `<option ${p.tableRates[j] === r.name ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select></div>`; for (let hh = 0; hh < THOURS; hh++) h += `<div class="pc tb ${p.tables[hh][j] ? 'on' : ''}" style="width:calc(var(--pc) * 2)" data-r="${j}" data-i="${hh}" title="${T0 + hh}:00"></div>`; const open = p.tables.filter(r => r[j]).length; h += `<div class="rh">${open ? open + 'h' : ''}</div>`; }
-    h += '<div class="lab rs">時間レーキ</div>'; c.hourRake.forEach(v => { h += `<div class="cnt ${v ? '' : 'z'}" style="width:calc(var(--pc) * 2)" title="${yen(v)}">${v ? Math.round(v / 1000) : 0}</div>`; }); h += '<div class="rh">×千円</div>';
-    h += '</div></div>';
-    h += `<div class="stats"><div><span class="k">日次レーキ</span><span class="v">${yen(c.rakeDay)}</span></div><div><span class="k">月次レーキ</span><span class="v">${yen(c.rakeMonth)}</span></div><div><span class="k">日次粗利</span><span class="v ${c.profitDay < 0 ? 'neg' : ''}">${yen(c.profitDay)}</span></div><div><span class="k">月次粗利</span><span class="v ${c.profitMonth < 0 ? 'neg' : ''}">${yen(c.profitMonth)}</span></div></div></div>`;
-  });
-  h += '</div>';
-  h += `<div class="row"><button class="btn" id="patAdd">＋ パターンを追加</button><span class="hint">パターンは何個でも作れます。曜日はどれか1つのパターンにだけ付きます。日ごとに変えたい時はシフト表の「指標」行を押してください。</span></div>`;
+    // レーキの表
+    const tRange = j => { let a = -1, b = -1; for (let hh = 0; hh < THOURS; hh++) if (p.tables[hh][j]) { if (a < 0) a = hh; b = hh; } return a < 0 ? ['', ''] : [T0 + a, T0 + b + 1]; };
+    h += `<h3>レーキ <span class="hint">卓ごとにレートを選び、開ける・閉める時刻を打つか帯を塗る（1時間単位）。${tg.utilFrom}時以降は深夜稼働率を掛ける</span></h3><div class="sswrap"><table class="ss tb" data-grid="tables"><thead><tr><th class="sx no">卓</th><th class="sx rate">レート</th><th class="sx in">開ける</th><th class="sx out">閉める</th><th class="sx hr">時間</th>`;
+    for (let hh = 0; hh < THOURS; hh++) h += `<th class="hh">${T0 + hh}</th>`; h += '</tr></thead><tbody>';
+    for (let j = 0; j < NTABLES; j++) { const [a, b] = tRange(j); const open = p.tables.filter(rw => rw[j]).length; const pa = pend('t' + j + 's'), pb = pend('t' + j + 'e');
+      h += `<tr><td class="sx no">${j + 1}</td><td class="sx rate"><select class="sss" data-tr="${j}"><option value="">—</option>${tg.rates.map(r => `<option ${p.tableRates[j] === r.name ? 'selected' : ''}>${esc(r.name)}</option>`).join('')}</select></td><td class="sx in"><input class="ssi" inputmode="decimal" data-g="t" data-r="${j}" data-c="s" value="${pa ?? a}"></td><td class="sx out"><input class="ssi" inputmode="decimal" data-g="t" data-r="${j}" data-c="e" value="${pb ?? b}"></td><td class="sx hr">${open || ''}</td>`;
+      for (let hh = 0; hh < THOURS; hh++) h += `<td class="pc tb ${p.tables[hh][j] ? 'on' : ''}" data-r="${j}" data-i="${hh}" title="${T0 + hh}:00"></td>`; h += '</tr>'; }
+    h += `</tbody><tfoot><tr class="sum"><td class="sx" colspan="5">時間レーキ（×千円）</td>${c.hourRake.map(v => `<td class="cnt ${v ? '' : 'z'}" title="${yen(v)}">${v ? Math.round(v / 1000) : 0}</td>`).join('')}</tr></tfoot></table></div>`;
+    h += `<div class="stats"><div><span class="k">日次レーキ</span><span class="v">${yen(c.rakeDay)}</span></div><div><span class="k">月次レーキ</span><span class="v">${yen(c.rakeMonth)}</span></div><div><span class="k">日次粗利</span><span class="v ${c.profitDay < 0 ? 'neg' : ''}">${yen(c.profitDay)}</span></div><div><span class="k">月次粗利</span><span class="v ${c.profitMonth < 0 ? 'neg' : ''}">${yen(c.profitMonth)}</span></div></div></div>`; }
+  h += `<div class="hint">パターンは何個でも作れます（上の「＋」）。曜日はどれか1つのパターンにだけ付きます。日ごとに変えたい時はシフト表の「指標」行を押してください。</div>`;
   const st = box.parentElement.scrollTop; box.innerHTML = h; box.parentElement.scrollTop = st;
   $('#tgBack').onclick = () => showView('grid');
   if (ro) { box.querySelectorAll('input,select,button:not(#tgBack)').forEach(el => el.disabled = true); return; }
@@ -3172,14 +3210,44 @@ function renderTargets() {
   $('#rateAdd').onclick = e => { targets().rates.push({ name: '新レート', price: 0 }); scheduleSave(); e.currentTarget.blur(); renderTargets(); };
   $('#patAdd').onclick = e => { const t = targets(); t.patterns.push(emptyPattern('パターン' + (t.patterns.length + 1))); scheduleSave(); e.currentTarget.blur(); renderTargets(); };
   box.querySelectorAll('[data-pdel]').forEach(b => b.onclick = () => { if (targets().patterns.length <= 1) return; if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'もう一度押すと削除'; setTimeout(() => { delete b.dataset.armed; b.textContent = 'このパターンを削除'; }, 3000); return; } targets().patterns.splice(+b.dataset.pdel, 1); scheduleSave(); b.blur(); renderTargets(); toast('パターンを削除しました'); });
+  box.querySelectorAll('[data-tgp]').forEach(b => b.onclick = () => { tgPat = +b.dataset.tgp; b.blur(); renderTargets(); });
   box.querySelectorAll('.card[data-p]').forEach(card => {
-    const pOf = () => targets().patterns[+card.dataset.p];
+    const pOf = () => targets().patterns[+card.dataset.p]; const pi = +card.dataset.p;
     card.querySelectorAll('[data-pf]').forEach(el => el.onchange = () => { const p = pOf(); if (!p) return; const f = el.dataset.pf; if (f === 'name') p.name = el.value.trim(); else if (f === 'daysOverride') p.daysOverride = el.value.trim() === '' ? null : num(el.value); else if (f === 'nightUtil') p.nightUtil = num(el.value) / 100; else p[f] = num(el.value); scheduleSave(); el.blur(); renderTargets(); });
     card.querySelectorAll('.chip[data-dow]').forEach(b => b.onclick = () => { const p = pOf(); if (!p) return; const d = +b.dataset.dow; const on = !p.days[d]; if (on) targets().patterns.forEach(q => q.days[d] = false); p.days[d] = on; scheduleSave(); b.blur(); renderTargets(); });
-    card.querySelectorAll('input.rng').forEach(inp => inp.onchange = () => { const p = pOf(); if (!p) return; const r = +inp.dataset.rng; const v = inp.value.trim().replace(/[０-９．]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)).replace(/[〜~ー]/g, '-'); if (!v) { p.staff[r].fill(false); } else { const m = v.match(/^(\d{1,2}(?:\.5)?)\s*-\s*(\d{1,2}(?:\.5)?)$/); if (!m) { toast('17-25 のように入れてください（17.5＝17時半）', true); return; } const s0 = +m[1], e0 = +m[2]; if (e0 <= s0) { toast('終わりは入りより後にしてください', true); return; } for (let i = 0; i < TSLOTS; i++) { const t = T0 + i / 2; p.staff[r][i] = t >= s0 && t < e0; } } scheduleSave(); inp.blur(); renderTargets(); });
     card.querySelectorAll('select[data-tr]').forEach(sel => sel.onchange = () => { const p = pOf(); if (!p) return; p.tableRates[+sel.dataset.tr] = sel.value; scheduleSave(); sel.blur(); renderTargets(); });
-    card.querySelectorAll('.pg').forEach(pg => paintable(pg, pOf));
+    const ra = card.querySelector('#rowAdd'); if (ra) ra.onclick = () => { const p = pOf(); if (!p) return; p.staff.push(new Array(TSLOTS).fill(false)); scheduleSave(); ra.blur(); renderTargets(); };
+    /* 入り・終わりのセル: スプシと同じく打ち込んで Enter/Tab/矢印で移動。両方そろったら帯を塗る（「17-25」と1つに打ってもよい） */
+    const parseT = (v, hourOnly) => { v = String(v).trim().replace(/[０-９．：]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)); if (!v) return ''; let m = v.match(/^(\d{1,2}):(\d{2})$/); let t = m ? +m[1] + (+m[2] >= 30 ? 0.5 : 0) : parseFloat(v); if (!Number.isFinite(t)) return NaN; t = hourOnly ? Math.round(t) : Math.round(t * 2) / 2; return t; };
+    const apply = (g, r, sv, ev) => { const p = pOf(); if (!p) return; if (g === 's') { const row = p.staff[r]; for (let i = 0; i < TSLOTS; i++) { const t = T0 + i / 2; row[i] = sv !== '' && ev !== '' && t >= sv && t < ev; } } else { for (let hh = 0; hh < THOURS; hh++) { const t = T0 + hh; p.tables[hh][r] = sv !== '' && ev !== '' && t >= sv && t < ev; } } };
+    const commit = inp => { const g = inp.dataset.g, r = +inp.dataset.r, cc = inp.dataset.c; const tr = inp.closest('tr'); const [si, ei] = tr.querySelectorAll('input.ssi'); const raw = inp.value.trim();
+      let sv, ev; const both = raw.replace(/[〜~ー]/g, '-').match(/^(.+?)\s*-\s*(.+)$/);
+      if (both && cc === 's') { sv = parseT(both[1], g === 't'); ev = parseT(both[2], g === 't'); } else { sv = parseT(si.value, g === 't'); ev = parseT(ei.value, g === 't'); }
+      if (Number.isNaN(sv) || Number.isNaN(ev)) { toast('時刻は数字で（17.5＝17時半、25＝翌1時）', true); return false; }
+      const lo = T0, hi = g === 's' ? T0 + TSLOTS / 2 : T0 + THOURS;
+      if ((sv !== '' && (sv < lo || sv >= hi)) || (ev !== '' && (ev <= lo || ev > hi))) { toast(`${lo}〜${hi} の間で入れてください`, true); return false; }
+      if (sv !== '' && ev !== '' && ev <= sv) { toast('終わりは入りより後にしてください', true); return false; }
+      const k = pi + '|' + g + r; delete tgPending[k + 's']; delete tgPending[k + 'e'];
+      if (sv === '' && ev === '') apply(g, r, '', ''); else if (sv === '' || ev === '') { tgPending[k + 's'] = sv; tgPending[k + 'e'] = ev; return true; } else apply(g, r, sv, ev);
+      scheduleSave(); return true; };
+    const inputs = () => [...card.querySelectorAll('input.ssi')];
+    card.querySelectorAll('input.ssi').forEach(inp => {
+      inp.onfocus = () => { inp.select(); };
+      inp.onkeydown = e => { if (e.isComposing || e.keyCode === 229) return;
+        const g = inp.dataset.g, r = +inp.dataset.r, cc = inp.dataset.c; let to = null;
+        if (e.key === 'Enter' || e.key === 'ArrowDown') to = { g, r: r + (e.shiftKey && e.key === 'Enter' ? -1 : 1), c: cc };
+        else if (e.key === 'ArrowUp') to = { g, r: r - 1, c: cc };
+        else if (e.key === 'Tab') to = e.shiftKey ? (cc === 'e' ? { g, r, c: 's' } : { g, r: r - 1, c: 'e' }) : (cc === 's' ? { g, r, c: 'e' } : { g, r: r + 1, c: 's' });
+        else if (e.key === 'ArrowRight' && cc === 's' && inp.selectionStart === inp.value.length) to = { g, r, c: 'e' };
+        else if (e.key === 'ArrowLeft' && cc === 'e' && inp.selectionStart === 0) to = { g, r, c: 's' };
+        else if (e.key === 'Escape') { inp.blur(); tgForce = true; renderTargets(); return; }
+        if (!to) return; e.preventDefault(); if (!commit(inp)) return;
+        tgFocus = to; tgForce = true; inp.onblur = null; renderTargets(); };
+      inp.onblur = () => { setTimeout(() => { if (card.contains(document.activeElement)) return; if (commit(inp)) { tgForce = true; renderTargets(); } }, 0); };
+    });
+    card.querySelectorAll('table.ss').forEach(pg => paintable(pg, pOf));
   });
+  if (tgFocus) { const f = tgFocus; tgFocus = null; const el = box.querySelector(`input.ssi[data-g="${f.g}"][data-r="${f.r}"][data-c="${f.c}"]`); if (el) { el.focus(); el.select(); } }
 }
 function rangeTxt(row) { /* 1つながりで塗られていれば「17-25」の形で返す（途切れていれば空） */ let a = -1, b = -1; for (let i = 0; i < row.length; i++) if (row[i]) { if (a < 0) a = i; b = i; } if (a < 0) return ''; for (let i = a; i <= b; i++) if (!row[i]) return ''; return (T0 + a / 2) + '-' + (T0 + (b + 1) / 2); }
 function paintable(pg, pOf) {
@@ -3188,7 +3256,7 @@ function paintable(pg, pOf) {
   const setCell = el => { const p = P(); if (!p) return; const r = +el.dataset.r, i = +el.dataset.i; if (kind === 'staff') { if (p.staff[r][i] === paint) return; p.staff[r][i] = paint; } else { if (p.tables[i][r] === paint) return; p.tables[i][r] = paint; } el.classList.toggle('on', paint); };
   pg.onpointerdown = e => { const el = e.target.closest('.pc'); if (!el || !pg.contains(el)) return; e.preventDefault(); paint = !el.classList.contains('on'); setCell(el); try { pg.setPointerCapture(e.pointerId); } catch {} };
   pg.onpointermove = e => { if (paint === null) return; const el = cellOf(e.clientX, e.clientY); if (el) setCell(el); };
-  const end = () => { if (paint === null) return; paint = null; scheduleSave(); renderTargets(); };
+  const end = () => { if (paint === null) return; paint = null; scheduleSave(); try { document.activeElement && document.activeElement.blur && document.activeElement.blur(); } catch {} tgForce = true; renderTargets(); };
   pg.onpointerup = end; pg.onpointercancel = end;
 }
 
