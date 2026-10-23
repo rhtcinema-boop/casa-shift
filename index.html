@@ -714,6 +714,7 @@ body.marks-on .grid tr.sep td.sp-ex{background:#ff9500}
 .grid th.day .memo{opacity:0;font-size:12px}
 .grid th.day .memo.has,.grid th.day:hover .memo{opacity:1}
 .grid th.day .dok{display:inline-flex;align-items:center;gap:2px;margin-left:5px;font-size:10px;font-weight:600;color:#8e8e93;cursor:pointer;vertical-align:middle;border:1px solid #c7ccd4;border-radius:5px;padding:0 4px 0 2px;background:#fff;line-height:16px}
+.presence{display:inline-flex;align-items:center;gap:3px;margin-right:6px}.presence .pav{width:26px;height:26px;border-radius:50%;display:inline-grid;place-items:center;background:#5b8def;color:#fff;font:600 12px var(--font);box-shadow:0 0 0 2px #fff}.presence .pav.ed{background:#e8590c;animation:pavp 1.6s ease-in-out infinite}@keyframes pavp{50%{box-shadow:0 0 0 2px #fff,0 0 0 5px rgba(232,89,12,.35)}}.presence .ptx{font-size:11px;color:#6e6e73;margin-left:3px;white-space:nowrap}@media (max-width:700px){.presence .ptx{display:none}}
 .grid th.day .dok input{margin:0;width:12px;height:12px;accent-color:#188038}
 .grid th.day .dok.on{color:#188038;border-color:#188038;background:#e7f5ea}
 .grid tr.sep td.sp-ok{background:#eef8f0!important;color:#188038!important;box-shadow:none!important;font-size:12px;font-weight:600}
@@ -2687,7 +2688,7 @@ function finishEdit(save, move) { setTimeout(() => { if (!editing) { hideKbar();
   if (!move && !editing) selectCell(k, f, true);
 }
 function commit(k, v) {
-  const sh = sheets[cur]; const old = sh.cells[k] || null; v = norm(v);
+  const sh = sheets[cur]; presLastEdit = Date.now(); const old = sh.cells[k] || null; v = norm(v);
   if (sameCell(old, v)) { render(); return; }
   justK = v ? k : null; store.patchCells(cur, { [k]: v }); justK = null;
   store.appendHistory(cur, [{ t: Date.now(), who: myId, k, from: old, to: v }]);
@@ -3794,6 +3795,18 @@ function maybeAutoSync() { if (window.__photoOnly) return; if (localMode || !dbA
   if (r && r.status === 'done' && age(r.done) < 10 * 60000) return; /* 10分以内に終わっている */
   const who = (window.__gasDb && (typeof __gasDb.who === 'function' ? __gasDb.who() : __gasDb.who)) || '';
   try { Promise.resolve(dbApi.doc('syncreq/' + storeId).set({ at: new Date().toISOString(), status: 'req', by: (who ? who + ' ' : '') + '(開いた時に自動)' })).then(() => kickCloudSync(storeId)).catch(() => {}); } catch (e) {} }
+/* ---------- いま開いている人（右上に表示。オーナー指示 2026-10-24） ----------
+   各端末が 30 秒ごとに presence/<名前の印> へ「誰が・どの店舗の・どの期間を・最後に触った時刻」を書く。90 秒以内の他の人を右上に丸で出す */
+const PRES_EVERY = 30000, PRES_ALIVE = 90000; let presLastEdit = 0, presId = null;
+function presKey() { if (presId) return presId; const who = String((window.__gasDb && (typeof __gasDb.who === 'function' ? __gasDb.who() : __gasDb.who)) || ''); let id = ''; if (who && who !== 'anon') { let h = 5381; for (const ch of who) h = ((h << 5) + h + ch.codePointAt(0)) >>> 0; id = 'u' + h.toString(36); } else { try { id = sessionStorage.getItem('casa-pres') || ''; } catch {} if (!id) { id = 'a' + Math.random().toString(36).slice(2, 9); try { sessionStorage.setItem('casa-pres', id); } catch {} } } presId = id; return id; }
+function presBeat() { if (localMode || !dbApi || !storeId || window.__photoOnly || document.hidden) return; const who = String((window.__gasDb && (typeof __gasDb.who === 'function' ? __gasDb.who() : __gasDb.who)) || ''); const sh = cur && sheets[cur];
+  try { Promise.resolve(dbApi.doc('presence/' + presKey()).set({ who: who && who !== 'anon' ? who : '名前なし', store: storeId, sheet: sh ? lbl(sh) + ' ' + (PH_LABEL[sh.phase] || '') : '', view, at: Date.now(), edit: presLastEdit })).catch(() => {}); } catch {} }
+function presRender() { let box = document.getElementById('presence'); const tools = document.querySelector('.top .tools'); if (!tools) return; if (!box) { box = document.createElement('div'); box.id = 'presence'; box.className = 'presence'; const who = tools.querySelector('.gas-who'); tools.insertBefore(box, who || null); }
+  const docs = (window.__gasDb && window.__gasDb.docs) || {}; const me = presKey(); const now = Date.now(); const list = Object.keys(docs).filter(p => p.indexOf('presence/') === 0 && p !== 'presence/' + me).map(p => docs[p]).filter(d => d && d.at && now - d.at < PRES_ALIVE && d.store === storeId);
+  const sig = list.map(d => d.who + d.sheet + (now - (d.edit || 0) < PRES_ALIVE ? 'e' : '')).join('|'); if (box.dataset.sig === sig) return; box.dataset.sig = sig;
+  box.innerHTML = list.map(d => { const editing = d.edit && now - d.edit < PRES_ALIVE; return `<span class="pav ${editing ? 'ed' : ''}" title="${esc(d.who)} さんが ${esc(d.sheet || 'この店舗')} を${editing ? '編集中' : '見ています'}">${esc(Array.from(d.who)[0] || '?')}</span>`; }).join('') + (list.length ? `<span class="ptx">${list.length}人が開いています</span>` : ''); box.hidden = !list.length; }
+setInterval(() => { try { presRender(); } catch {} }, 5000); setInterval(() => { try { presBeat(); } catch {} }, PRES_EVERY); setTimeout(() => { try { presBeat(); } catch {} }, 4000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { try { presBeat(); } catch {} } });
 function kickSyncAfterChange() { /* 募集期間・公開の変更はスタッフ用ページに関わるので、保存したらすぐ同期を頼む（オーナー報告 2026-10-19: 保存しても募集が出なかった） */ if (localMode || !dbApi || !storeId) return; try { Promise.resolve(dbApi.doc('syncreq/' + storeId).set({ at: new Date().toISOString(), status: 'req', by: '設定の変更' })).then(() => kickCloudSync(storeId)).catch(() => {}); } catch (e) {} }
 function kickCloudSync(id) { /* クラウド同期をその場で走らせる（Mac 不要）。失敗しても10分おきのトリガーが拾う */ try { const api = window.__gasDb && window.__gasDb.syncNow; if (api) Promise.resolve(api(id)).catch(e => console.warn('syncNow', e && e.message)); } catch (e) {} }
 function syncNowLabel() { const el = $('#syncNowSt'); if (!el) return; const r = syncReq; const tm = s => s ? new Date(s).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '';
