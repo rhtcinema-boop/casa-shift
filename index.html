@@ -2051,7 +2051,7 @@ function shiftCost(c, st, settings) {
   return Math.max(0, early * (st.early || 0) + (late + brk) * (st.late || 0)) + (st.fare || 0);
 }
 function hasShifts(sh, sid) { const c = sh?.cells || {}; const p = sid + '|'; for (const k in c) if (k.startsWith(p) && c[k] && (c[k].s != null || c[k].e != null)) return true; return false; }
-function activeStaff(sh) { if (sh === undefined) sh = cur ? sheets[cur] : null; return (config?.staff || []).filter(s => !s.archived || (sh && hasShifts(sh, s.id))); }
+function activeStaff(sh) { if (sh === undefined) sh = cur ? sheets[cur] : null; return (config?.staff || []).filter(s => !s.archived || (sh && sh.phase === 'fixed' && hasShifts(sh, s.id))); } /* 非表示の人は確定済みの過去シフトにだけ残す */
 function currentStaff() { return (config?.staff || []).filter(s => !s.archived && !s.placeholder); }
 function headcount(sh, day, forTargets) {
   const arr = new Array(SLOTS).fill(0); const inclEmp = !forTargets || targets()?.includeEmp;
@@ -3836,7 +3836,7 @@ function renderStaff() {
     tr.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { const a = b.dataset.a; const arr = config.staff;
       if (a === 'up' && i > 0) [arr[i - 1], arr[i]] = [arr[i], arr[i - 1]];
       if (a === 'down' && i < arr.length - 1) [arr[i + 1], arr[i]] = [arr[i], arr[i + 1]];
-      if (a === 'arch') arr[i].archived = !arr[i].archived;
+      if (a === 'arch') { arr[i].archived = !arr[i].archived; toast(arr[i].archived ? `${arr[i].name} を非表示にしました（確定済みのシフトには残ります）` : `${arr[i].name} を復帰しました`); }
       if (a === 'del') { /* 削除は2回押し。シートに入っている時間はそのまま残る（表には出なくなる）。スタッフ用ページの名簿からも次の同期で消える */ if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'もう一度押すと削除'; setTimeout(() => { delete b.dataset.armed; b.textContent = '削除'; }, 3000); return; } const nm = arr[i].name; arr.splice(i, 1); save().then(() => { renderStaff(); toast(nm + ' を削除しました'); }); return; }
       if (a === 'pin') { config.pinResets = Object.assign({}, config.pinResets || {}, { [arr[i].name]: new Date().toISOString() }); toast(arr[i].name + ' の暗証番号を次の同期でリセットします。本人は次のログインで新しい番号を決めます'); }
       save().then(renderStaff); });
