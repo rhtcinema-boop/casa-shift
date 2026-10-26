@@ -163,7 +163,7 @@ async function write(op) { await ensure(); writes++; inflight++; (window.__wlog 
     },
   };
   window.claude = { use: async n => { dbg('use ' + n); return (n === 'db' ? db : n === 'user' ? user : n === 'downloads' ? downloads : null); } };
-  window.__gasDb = { get inflight() { return inflight; }, get docs() { return docs; }, get rev() { return rev; }, get writes() { return writes; }, poll, who: whoId, write: (path, data) => write({ op: 'set', path, data }), rake: tab => call('admin_rake', tab), syncNow: id => call('admin_syncNow', id) };
+  window.__gasDb = { get inflight() { return inflight; }, get docs() { return docs; }, get rev() { return rev; }, get writes() { return writes; }, poll, who: whoId, write: (path, data) => write({ op: 'set', path, data }), rake: tab => call('admin_rake', tab), syncNow: id => call('admin_syncNow', id), publishMeta: id => call('admin_publishMeta', id) };
   const refreshWho = () => { const b = document.querySelector('.gas-who'); if (b) b.remove(); whoButton(); };
   const boot = async () => { if (window.__photoOnly) return; /* 写真だけの表示では名前を聞かない */ if (window.__topMe) { lsSet(WHO_KEY, window.__topMe); } whoButton(); if (window.__topMe) { call('admin_setWho', window.__topMe).catch(() => {}); return; }
     /* 1) URL の ?me=名前（最優先）  2) この画面の保存領域  3) サーバーに覚えた名前（Google にログイン中の端末のみ）  4) どれも無ければ聞く */
@@ -2810,7 +2810,7 @@ function openPublish(anchor) {
       const box = $('#pbNow', pop); box.classList.add('ask'); $('#pbAuto', pop).hidden = true;
       box.innerHTML = `<div class="pbq">${esc(lbl(sh))}の確定シフトを公開しますか？</div><div class="pbnote">公開するとスタッフがシフトを確認できます${sh.announce ? '（自動公開日は解除）' : ''}。</div><div class="pbbtns"><button class="btn" id="pbNo">やめる</button><button class="btn primary" id="pbYes">公開する</button></div>`;
       $('#pbNo', pop).onclick = () => pop.remove(); $('#pbYes', pop).focus();
-      $('#pbYes', pop).onclick = () => { $('#pbYes', pop).disabled = true; store.patchSheet(sh.id, { published: true, announce: '' }); toast('公開しました。スタッフ用ページに反映中（1分ほど）'); setTimeout(() => { try { kickSyncAfterChange(); } catch (e) {} }, 1500); pop.remove(); };
+      $('#pbYes', pop).onclick = () => { $('#pbYes', pop).disabled = true; store.patchSheet(sh.id, { published: true, announce: '' }); toast('公開しました。スタッフ用ページに反映中…'); setTimeout(() => { try { kickSyncAfterChange(); } catch (e) {} }, 300); pop.remove(); };
     };
     const off = $('#pbOff', pop); if (off) off.onclick = () => { const box = $('#pbNow', pop); box.classList.add('ask'); box.innerHTML = `<div class="pbq">${esc(lbl(sh))}の公開をやめますか？</div><div class="pbnote">スタッフ用ページから見えなくなります。</div><div class="pbbtns"><button class="btn" id="pbNo">やめない</button><button class="btn danger" id="pbYes">公開をやめる</button></div>`; $('#pbNo', pop).onclick = () => pop.remove(); $('#pbYes', pop).onclick = () => { store.patchSheet(sh.id, { published: false, announce: (sh.announce && sh.announce <= todayISO()) ? '' : (sh.announce || '') }); toast('公開をやめました'); pop.remove(); }; };
   });
@@ -3808,7 +3808,10 @@ function presRender() { let box = document.getElementById('presence'); const too
   box.innerHTML = list.map(d => { const editing = d.edit && now - d.edit < PRES_ALIVE; return `<span class="pav ${editing ? 'ed' : ''}" title="${esc(d.who)} さんが ${esc(d.sheet || 'この店舗')} を${editing ? '編集中' : '見ています'}">${esc(Array.from(d.who)[0] || '?')}</span>`; }).join('') + (list.length ? `<span class="ptx">${list.length}人が開いています</span>` : ''); box.hidden = !list.length; }
 setInterval(() => { try { presRender(); } catch {} }, 5000); setInterval(() => { try { presBeat(); } catch {} }, PRES_EVERY); setTimeout(() => { try { presBeat(); } catch {} }, 4000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { try { presBeat(); } catch {} } });
-function kickSyncAfterChange() { /* 募集期間・公開の変更はスタッフ用ページに関わるので、保存したらすぐ同期を頼む（オーナー報告 2026-10-19: 保存しても募集が出なかった） */ if (localMode || !dbApi || !storeId) return; try { Promise.resolve(dbApi.doc('syncreq/' + storeId).set({ at: new Date().toISOString(), status: 'req', by: '設定の変更' })).then(() => kickCloudSync(storeId)).catch(() => {}); } catch (e) {} }
+async function kickSyncAfterChange() { /* 募集期間・公開の変更はスタッフ用ページに関わるので、保存が終わり次第 ①公開設定と確定シフトだけを数秒で送る（publishMeta） ②本同期を頼む（オーナー報告 2026-10-19 / 2026-10-26 ラグ対策） */ if (localMode || !dbApi || !storeId) return;
+  try { for (let i = 0; i < 50 && window.__gasDb && window.__gasDb.inflight > 0; i++) await new Promise(r => setTimeout(r, 200)); /* 書き込み中なら終わるまで待つ（最大10秒） */
+    const api = window.__gasDb && window.__gasDb.publishMeta; if (api) { try { const r = await api(storeId); if (r && r.ok) toast('スタッフ用ページに反映しました'); else console.warn('publishMeta', r); } catch (e) { console.warn('publishMeta', e && e.message); } }
+    await dbApi.doc('syncreq/' + storeId).set({ at: new Date().toISOString(), status: 'req', by: '設定の変更' }); kickCloudSync(storeId); } catch (e) {} }
 function kickCloudSync(id) { /* クラウド同期をその場で走らせる（Mac 不要）。失敗しても10分おきのトリガーが拾う */ try { const api = window.__gasDb && window.__gasDb.syncNow; if (api) Promise.resolve(api(id)).catch(e => console.warn('syncNow', e && e.message)); } catch (e) {} }
 function syncNowLabel() { const el = $('#syncNowSt'); if (!el) return; const r = syncReq; const tm = s => s ? new Date(s).toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }) : '';
   if (!r) { el.textContent = '押すと1〜2分で元のスプシと同期します'; return; }
