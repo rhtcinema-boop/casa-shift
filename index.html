@@ -1925,7 +1925,7 @@ const store = {
         if (merged && now && JSON.stringify(mergeConfig(base, mine, now)) === JSON.stringify(now)) break;
         merged = mergeConfig(base, mine, now); await ref.set(merged); await new Promise(r => setTimeout(r, 250 + Math.random() * 400));
       }
-      cfgBase[sid] = JSON.parse(JSON.stringify(merged)); }); } catch (e) { console.error(e); toast('保存できませんでした: ' + (e.code || e.message), true); } },
+      cfgBase[sid] = JSON.parse(JSON.stringify(merged)); schedulePublishMeta(); }); } catch (e) { console.error(e); toast('保存できませんでした: ' + (e.code || e.message), true); } },
   async patchStoreSettings(id, fields) {
     if (!canW()) { toast(online ? '編集できません' : 'オフライン中は閲覧のみです', true); return false; }
     if (id === storeId && config) config.settings = Object.assign({}, config.settings || {}, fields);
@@ -1953,7 +1953,7 @@ const store = {
     try { await inOrder('sheets/' + id, () => dbApi.doc('sheets/' + id).update({ cells: send })); saveSt('saved'); } catch (e) { console.error(e); saveSt('fail'); toast('保存できませんでした: ' + (e.code || e.message), true); }
     finally { setTimeout(() => { let dropped = false; for (const k in mine) if (pend[k] === mine[k]) { delete pend[k]; dropped = true; } if (dropped && serverSheets[id] && !localMode) { const fresh = JSON.parse(JSON.stringify(serverSheets[id])); fresh.cells = fresh.cells || {}; for (const k in pend) { if (pend[k]) fresh.cells[k] = pend[k]; else delete fresh.cells[k]; } sheets[id] = fresh; render(); } }, 300); } // then show exactly what the server has // until the server has it, a stale snapshot must not undo what I just typed
   },
-  async patchSheet(id, fields) { scheduleWidget();
+  async patchSheet(id, fields) { scheduleWidget(); try { const s0 = sheets[id]; if (s0 && s0.phase === 'fixed' && (s0.published || fields.published) && (fields.cells || fields.memos || 'published' in fields || 'announce' in fields)) schedulePublishMeta(); } catch (e) {}
     if (!canW()) { toast(online ? '編集できません' : 'オフライン中は閲覧のみです', true); render(); return; } 
     const prev = sheets[id] || {}; const send = {};
     for (const f in fields) { // update() merges nested maps, so a key dropped from memos/checks must be sent as null to really disappear
@@ -2691,6 +2691,7 @@ function finishEdit(save, move) { setTimeout(() => { if (!editing) { hideKbar();
 function commit(k, v) {
   const sh = sheets[cur]; presLastEdit = Date.now(); const old = sh.cells[k] || null; v = norm(v);
   if (sameCell(old, v)) { render(); return; }
+  if (sh.phase === 'fixed' && sh.published) schedulePublishMeta();
   justK = v ? k : null; store.patchCells(cur, { [k]: v }); justK = null;
   store.appendHistory(cur, [{ t: Date.now(), who: myId, k, from: old, to: v }]);
   const stK = (config?.staff || []).find(x => x.id === k.split('|')[0]); const w = wishSheetOf(sh); if (w && v && !stK?.placeholder && overWish(v, w.cells[k])) { const wc = w.cells[k]; toast(`希望超過: ${wc ? '希望は ' + cellTxt(wc) : 'この日は希望なし'}（赤下線）`, true); }
@@ -3808,6 +3809,7 @@ function presRender() { let box = document.getElementById('presence'); const too
   box.innerHTML = list.map(d => { const editing = d.edit && now - d.edit < PRES_ALIVE; return `<span class="pav ${editing ? 'ed' : ''}" title="${esc(d.who)} さんが ${esc(d.sheet || 'この店舗')} を${editing ? '編集中' : '見ています'}">${esc(Array.from(d.who)[0] || '?')}</span>`; }).join('') + (list.length ? `<span class="ptx">${list.length}人が開いています</span>` : ''); box.hidden = !list.length; }
 setInterval(() => { try { presRender(); } catch {} }, 5000); setInterval(() => { try { presBeat(); } catch {} }, PRES_EVERY); setTimeout(() => { try { presBeat(); } catch {} }, 4000);
 document.addEventListener('visibilitychange', () => { if (!document.hidden) { try { presBeat(); } catch {} } });
+let pmTimer = null; function schedulePublishMeta() { /* 公開済みの確定シフトのマスや名前を変えたら、4秒後に（続けて直している間は待って）公開設定＋確定シフトをスタッフ用ページへ送る（2026-10-27 オーナー要望: 変更も数秒で反映） */ if (localMode || !storeId) return; clearTimeout(pmTimer); pmTimer = setTimeout(async () => { try { for (let i = 0; i < 50 && window.__gasDb && window.__gasDb.inflight > 0; i++) await new Promise(r => setTimeout(r, 200)); const api = window.__gasDb && window.__gasDb.publishMeta; if (api) await api(storeId); } catch (e) { console.warn('publishMeta', e && e.message); } }, 4000); }
 async function kickSyncAfterChange() { /* 募集期間・公開の変更はスタッフ用ページに関わるので、保存が終わり次第 ①公開設定と確定シフトだけを数秒で送る（publishMeta） ②本同期を頼む（オーナー報告 2026-10-19 / 2026-10-26 ラグ対策） */ if (localMode || !dbApi || !storeId) return;
   try { for (let i = 0; i < 50 && window.__gasDb && window.__gasDb.inflight > 0; i++) await new Promise(r => setTimeout(r, 200)); /* 書き込み中なら終わるまで待つ（最大10秒） */
     const api = window.__gasDb && window.__gasDb.publishMeta; if (api) { try { const r = await api(storeId); if (r && r.ok) toast('スタッフ用ページに反映しました'); else console.warn('publishMeta', r); } catch (e) { console.warn('publishMeta', e && e.message); } }
