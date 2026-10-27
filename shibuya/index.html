@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="ja"><head><title>casa渋谷 シフト</title><meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="casa渋谷"><meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="theme-color" content="#f6f3ee"><link rel="apple-touch-icon" href="../icon-180.png"><link rel="icon" href="../icon-192.png"><link rel="manifest" href="manifest.webmanifest"><script>window.CASA_API_URL="https://script.google.com/macros/s/AKfycbz-z793_Q1Bx5lvp5xdH0iSawWHGqN8xzCaljuPfvB_iXEiUQ3fnJC4zMLktLz6Xcr3/exec";window.CASA_STATIC=1;window.CASA_STATIC_MAP={"上野":"https://rhtcinema-boop.github.io/casa-shift/ueno/","札幌":"https://rhtcinema-boop.github.io/casa-shift/sapporo/","渋谷":"https://rhtcinema-boop.github.io/casa-shift/shibuya/"};</script><script>/* 店長アプリを Apps Script の外（GitHub Pages）で開いた時だけ使う: google.script.run / google.script.url の代わりに、窓口へ fetch で頼む。
+   Apps Script の画面上部の「このアプリケーションは Google Apps Script のユーザーによって…」の帯を出さないため（オーナー指示 2026-10-21） */
+(function () {
+  if (window.google && window.google.script && window.google.script.run) return;
+  var API = window.CASA_API_URL; if (!API) return;
+  var q = new URLSearchParams(location.search);
+  if (q.get('me')) { window.__who = q.get('me').trim().slice(0, 30); window.__topMe = window.__who; }
+  if (q.get('pw')) window.__pass = q.get('pw');
+  window.__staticBase = location.origin + location.pathname;
+  function runner(ok, ng) {
+    var o = {
+      withSuccessHandler: function (f) { return runner(f, ng); },
+      withFailureHandler: function (f) { return runner(ok, f); },
+    };
+    return new Proxy(o, { get: function (t, name) { if (name in t) return t[name]; return function () {
+      var args = Array.prototype.slice.call(arguments);
+      fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ api: name, args: args }), redirect: 'follow' })
+        .then(function (r) { return r.text(); })
+        .then(function (t) { var j; try { j = JSON.parse(t); } catch (e) { throw new Error('窓口の返事が読めません（Googleの一時エラー）'); } if (j && j.__err) throw new Error(j.__err); if (j && j.error) throw new Error(j.error); if (ok) ok(j ? j.ok : null); })
+        .catch(function (e) { if (ng) ng({ message: (e && e.message) || String(e) }); });
+    }; } });
+  }
+  window.google = window.google || {};
+  window.google.script = { run: runner(null, null), url: { getLocation: function (cb) { var p = {}; q.forEach(function (v, k) { p[k] = v; }); cb({ parameter: p, hash: location.hash.slice(1) }); } } };
+})();</script><base target="_top"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>
+:root{color-scheme:light;--bg:#f2f2f7;--card:#fff;--fg:#1c1c1e;--muted:#6e6e73;--line:#e5e5ea;--accent:#0071e3;--off:#c5221f;--offbg:#fce8e6;--in:#fff4c2;--ok:#188038}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--fg);font:16px -apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;-webkit-text-size-adjust:100%}
+header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:12px 16px;display:flex;align-items:center;gap:10px}
+header b{font-size:17px}header .sp{flex:1}header button{font-size:13px}
+main{max-width:560px;margin:0 auto;padding:12px 16px 120px;display:flex;flex-direction:column;gap:12px}
+.card{background:var(--card);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+h1{font-size:22px;margin:8px 0 0}label{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:6px}
+select,input{font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--fg);width:100%}
+button{font:inherit;font-weight:600;border:0;border-radius:10px;padding:11px 14px;background:#e9e9ee;color:var(--fg);cursor:pointer}
+button.primary{background:var(--accent);color:#fff}button.link{background:none;color:var(--accent);padding:6px}
+button:disabled{opacity:.45}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.row>*{flex:1}
+.calhero{text-align:center;gap:6px}.calbig{font-size:40px;line-height:1}.calbtn{display:block;margin:10px 0 6px}.calbtn button{width:100%;font-size:17px;padding:14px}.calmore summary{font-weight:600;cursor:pointer;color:var(--accent)}.calmore[open] summary{margin-bottom:8px}
+.man{display:flex;gap:6px;flex:1 1 100%!important}.man input{text-align:center;padding:9px 4px;min-width:0}
+.chips{display:flex;gap:6px;flex-wrap:wrap}.chip{padding:8px 12px;border-radius:999px;font-size:14px;flex:none}.chip.on{background:var(--accent);color:#fff}
+.seg{display:flex;background:#e9e9ee;border-radius:10px;padding:3px}.seg button{flex:1;background:none;padding:8px;font-size:14px;color:var(--muted)}.seg button.on{background:var(--card);color:var(--fg);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.hint{font-size:13px;color:var(--muted);line-height:1.5}
+.err{color:var(--off);font-size:14px;font-weight:600}
+.day{display:grid;grid-template-columns:72px 1fr 1fr 48px;gap:6px;align-items:center;padding:6px 0;border-top:1px solid var(--line)}
+.day .dt{font-size:15px;font-weight:600}.day .dt small{display:block;font-size:12px;font-weight:600}.day.we .dt{color:var(--off)}
+.day input{text-align:center;padding:9px 4px}.day input.has{background:var(--in)}
+.day .offb{padding:9px 0;font-size:14px}.day.isoff .offb{background:var(--off);color:#fff}.day.isoff input{opacity:.35}
+.day .pick{grid-column:2/5;font-size:14px;padding:7px 10px}
+.offmode .day{cursor:pointer}.offmode .day .pick,.offmode .day input{pointer-events:none}
+.bar{position:fixed;left:0;right:0;bottom:0;background:var(--card);border-top:1px solid var(--line);padding:10px 16px calc(10px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:6px;z-index:6}
+.bar .sum{font-size:14px;font-weight:700;text-align:center}.bar .sum.armed{color:#b06000}
+.toast{position:fixed;left:50%;bottom:120px;transform:translateX(-50%);background:rgba(28,28,30,.92);color:#fff;padding:10px 16px;border-radius:12px;font-size:14px;z-index:9;max-width:90vw;text-align:center}
+.done{text-align:center;padding:30px 16px}.done b{font-size:20px;display:block;margin-bottom:8px;color:var(--ok)}
+.big{display:flex;flex-direction:column;gap:12px}.big button{padding:22px 16px;font-size:19px;border-radius:16px;text-align:left;display:flex;flex-direction:column;gap:4px;background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.08)}.big button small{font-size:13px;font-weight:500;color:var(--muted)}.big button.primary{background:var(--accent);color:#fff}.big button.primary small{color:#dbeafe}
+.warn{background:var(--offbg);color:var(--off);border:1.5px solid var(--off);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:8px;font-weight:700}.warn button{background:var(--off);color:#fff;align-self:flex-start}
+.plist button{display:flex;justify-content:space-between;align-items:center;text-align:left}.plist .st{font-size:12px;font-weight:600;border-radius:999px;padding:3px 9px;background:#e9e9ee;color:var(--muted)}.plist .st.open{background:#e6f4ea;color:var(--ok)}.plist .st.need{background:var(--offbg);color:var(--off)}
+textarea{font:inherit;font-size:16px;padding:10px 12px;border:1px solid var(--line);border-radius:10px;width:100%;min-height:76px;resize:vertical}
+.vday{border-top:1px solid var(--line);padding:8px 0}.vday>b{font-size:15px}.vday.we>b{color:var(--off)}.vday.today{background:#eef5ff;border-radius:10px;padding:8px}
+.vrow{display:flex;justify-content:space-between;font-size:15px;padding:3px 0;font-variant-numeric:tabular-nums}.vrow.me{font-weight:700;color:var(--accent)}
+.mine{display:grid;grid-template-columns:70px 1fr;gap:4px 10px;font-size:16px;font-variant-numeric:tabular-nums}.mine .we{color:var(--off)}.mine b{font-weight:700}
+.copy{user-select:all;word-break:break-all;font-size:13px;background:#f2f2f7;border-radius:8px;padding:8px}
+ol.steps{margin:0;padding-left:1.3em;line-height:1.7;font-size:14px}
+.warn{background:#FFF5F2!important;border:0!important;box-shadow:inset 3px 0 0 #E07842;border-radius:12px!important;padding:12px 14px!important;color:#9A4529!important;font-size:14px;gap:6px!important}.warn .hint{color:#667085!important;font-size:12px!important;font-weight:500!important}.warn button{height:36px;padding:0 14px;background:#C65D35!important;font-size:14px}
+.big{gap:10px!important}.big button{background:#fff!important;color:#1D2939!important;min-height:84px;border-radius:14px!important;padding:14px 16px!important;display:grid!important;grid-template-columns:44px 1fr 16px;align-items:center;column-gap:12px;box-shadow:0 1px 2px rgba(16,24,40,.06)!important;transition:background .12s ease-out}.big button:active{background:#F2F5FA!important}.big button .ic{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;grid-row:1/3}.big button .ic svg{width:24px;height:24px}.big button .tt{font-size:16px;font-weight:600}.big button small{color:#667085!important;font-size:12px;font-weight:400;grid-column:2}.big button .chev{grid-row:1/3;grid-column:3;color:#C0C4CC;font-size:20px}.big button.primary small{color:#667085!important}
+.next{background:#EEF5FF;color:#1D4E89;border-radius:12px;padding:10px 14px;font-size:14px;font-weight:600}.next small{display:block;font-size:12px;font-weight:500;color:#5B7BA6}
+header{min-height:56px}main{max-width:480px!important;padding-left:16px!important;padding-right:16px!important}
+button.next{display:flex;align-items:center;justify-content:space-between;width:100%;min-height:64px;background:#EAF3FF;color:#174A7E;border:0;border-radius:12px;padding:10px 14px;text-align:left;font:600 14px -apple-system,sans-serif;transition:background .12s ease-out}button.next:active{background:#DCEBFF}button.next small{display:block;font-size:11px;font-weight:500;color:#667085;margin-top:2px}button.next .arr{color:#7699C4;font-size:18px}
+button.warn{display:flex!important;flex-direction:row!important;align-items:center;justify-content:space-between;width:100%;min-height:76px;text-align:left;font:600 13px -apple-system,sans-serif}button.warn:active{background:#FFEAE4!important}button.warn .hint{display:block;margin-top:4px}button.warn .arr{color:#C65D35;font-size:18px}
+.vday.flash{animation:vflash 1.4s ease-out}@keyframes vflash{0%,40%{background:#DCEBFF}100%{background:transparent}}
+#who{background:none;border:0;font:500 13px -apple-system,sans-serif;color:var(--muted);cursor:pointer;padding:8px 4px;white-space:nowrap;max-width:38vw;overflow:hidden;text-overflow:ellipsis;flex:none}.umenu{position:fixed;top:52px;right:12px;background:#fff;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.15);padding:6px;z-index:20}.umenu button{display:block;width:100%;text-align:left;background:none;color:#C93632;padding:10px 14px;font-size:15px}.umenu #umStores{color:#1D2939;border-bottom:1px solid #E5E7EB}
+main{padding-bottom:calc(24px + env(safe-area-inset-bottom))!important}
+#back{background:none;border:0;color:#007AFF;font:600 15px -apple-system,sans-serif;padding:8px 12px 8px 0;cursor:pointer;flex:none}#back:active{opacity:.5}header b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* ホームは画面いっぱいに（下の余白を余らせない。オーナー指示） */
+main.home{min-height:calc(100dvh - 56px);box-sizing:border-box;padding-bottom:calc(16px + env(safe-area-inset-bottom,0px))!important}main.home .big{flex:1;min-height:0}main.home .big button{flex:1;min-height:88px;align-content:center}main.home .big button#goView{flex:2} /* シフトを見るは毎日使うので大きく、希望を出すは小さめ（オーナー指示） */ main.home .big button#goView .tt{font-size:20px}main.home .big button#goView .ic{width:52px;height:52px}main.home .big button#goView .ic svg{width:28px;height:28px}
+/* 日付の行（押して開く） */
+.drow{border-top:1px solid #F0F1F3;padding:0}.drow .dhead{width:100%;display:flex;align-items:center;gap:8px;background:none;border:0;padding:0 2px;min-height:56px;font:inherit;color:inherit;text-align:left;cursor:pointer;border-radius:0}.drow .dd{font-size:15px;font-weight:600;flex:1}.drow.we .dd{color:var(--off)}.drow.today .dd{color:#007AFF}.drow .mn{font-size:12px;font-weight:600;color:#1769AA;font-variant-numeric:tabular-nums}.drow .mn.off{color:#98A2B3;font-weight:400}.drow.open{background:#EAF3FF;border-radius:10px;padding:0 8px;margin:0 -8px}.drow small{font-size:12px;color:#667085}.drow .chev{color:#98A2B3;font-size:18px;transition:transform .15s ease-out}.drow.open .chev{transform:rotate(90deg)}.drow .dbody{padding-bottom:8px}.drow.today{background:#F0F7FF;border-radius:10px;padding:0 8px;margin:0 -8px}.drow .dbody{animation:dopen .18s ease-out}@keyframes dopen{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.legend{display:flex;align-items:center;gap:12px;font-size:11px;font-weight:500;color:#667085;margin:6px 0 2px;flex-wrap:wrap}.legend .lg{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:4px;vertical-align:-1px}.legend .lg.g{background:#81c995}.legend .lg.b{background:#8ab4f8}.legend .lg.r{background:#f28b82}
+/* みんなのシフトの帯 */
+.gday{padding:2px 0 4px}
+.grow{display:grid;grid-template-columns:62px 1fr;align-items:center;min-height:30px;border-top:1px solid #F0F1F3}.grow.me .gname{color:#0b57d0;font-weight:700}.grow.me .gtrack{background:#EAF3FF;border-radius:4px}
+.gname{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-right:6px}
+.gtrack{position:relative;height:28px}
+.gaxis{border-top:0;min-height:16px}.gaxis .gtrack{height:14px}.gaxis i{position:absolute;top:0;transform:translateX(-50%);font-size:9px;line-height:14px;color:#667085;font-style:normal;font-variant-numeric:tabular-nums}
+.gheat{border-top:0;min-height:18px}.gheat .gname{font-size:11px;font-weight:500;color:#667085}.gheat .gtrack{display:grid;gap:1px;height:16px}.gheat i{font-size:9px;line-height:16px;text-align:center;color:#fff;font-style:normal;background:#f3f3f3;border-radius:2px;font-variant-numeric:tabular-nums}
+.gheat .h1{background:rgba(24,128,56,.30)}.gheat .h2{background:rgba(24,128,56,.45)}.gheat .h3{background:rgba(24,128,56,.60)}.gheat .h4{background:rgba(24,128,56,.75)}.gheat .h5{background:rgba(24,128,56,.85)}
+.gbar{position:absolute;top:4px;height:20px;border-radius:4px;overflow:hidden;display:flex;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}.gbar .g1{background:#81c995;height:100%}.gbar .g1.ld{background:#8ab4f8}.gbar .g2{flex:1;background:#81c995}.gbar .g2.cl{background:#f28b82}
+.gbar em{position:absolute;left:5px;top:0;line-height:20px;font-size:10px;font-style:normal;color:#1f1f1f;white-space:nowrap;font-variant-numeric:tabular-nums}
+#htitle select{font:700 17px -apple-system,sans-serif;color:inherit;border:0;background:transparent;padding:4px 18px 4px 0;appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23667085' stroke-width='1.5'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 2px center}
+.stt{font-size:13px;font-weight:600;color:#344054;margin:4px 0}.stlist{display:flex;flex-direction:column;gap:6px;margin:4px 0 8px}.strow{display:grid;grid-template-columns:auto 1fr;gap:6px 10px;align-items:center;font-size:14px;font-weight:500;color:#1D2939;min-height:52px}.strow input[type=checkbox]{width:20px;height:20px;accent-color:#007AFF}.strow .stas{grid-column:2;font-size:15px;height:40px;padding:0 12px;border:0;background:#F5F6F8;border-radius:8px}#stSave{height:44px}.stlist{gap:12px}
+[hidden]{display:none!important}
+/* ホーム: 余白を減らして文字を大きく（オーナー指示 2026-10-10） */
+.home{min-height:0!important}.home .big{flex:none!important}.home .big button,.home .big button#goView{flex:none!important;min-height:0!important;padding:18px 16px!important;grid-template-columns:56px 1fr 18px!important;column-gap:14px!important}
+.big button .tt,.home .big button#goView .tt{font-size:22px!important;font-weight:700!important}.big button small{font-size:15px!important;margin-top:2px}.big button .ic,.home .big button#goView .ic{width:56px!important;height:56px!important}.big button .ic svg,.home .big button#goView .ic svg{width:30px!important;height:30px!important}.big button .chev{font-size:22px}
+.next{font-size:17px}.next small{font-size:14px}header b,#htitle select{font-size:19px!important}
+.strow select.stas,.strow .stasNew{grid-column:2;font-size:15px;height:40px;padding:0 12px;border:0;background:#F5F6F8;border-radius:8px;width:100%}.strow .stasNew{background:#fff;border:1px solid var(--line)}
+.allbtn{margin-top:4px;background:#fff;color:#1D2939;border-radius:14px;padding:16px;display:grid;grid-template-columns:1fr 18px;align-items:center;text-align:left;box-shadow:0 1px 2px rgba(16,24,40,.06)}.allbtn .tt{font-size:20px;font-weight:700}.allbtn small{grid-column:1;font-size:14px;color:#667085;font-weight:400}.allbtn .chev{grid-row:1/3;color:#98a2b3;font-size:22px}.hint.center{text-align:center}
+.mine.all b{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.stb{font-style:normal;font-size:12px;font-weight:700;color:#175cd3;background:#eff4ff;border-radius:6px;padding:2px 7px}.rl,.rc{font-style:normal;font-size:11px;font-weight:700;border-radius:5px;padding:1px 6px}.rl{color:#1a5fb4;background:#e3edfb}.rc{color:#b42318;background:#fde9e7}
+/* 上の店舗名（切り替え）が「戻る」と並ぶと潰れる対策（崩れ検査 2026-10-10） */
+#htitle{flex:1 1 auto;min-width:0;overflow:hidden}#htitle select{width:auto!important;max-width:100%;text-overflow:ellipsis}
+/* ホーム配置（オーナー指示 2026-10-10 13:17）: 上半分が「シフトを見る」、下に「希望を出す」「全店舗のシフト」を縦に */
+.home .big button#goView{min-height:min(42dvh,360px)!important;align-content:center}.home .big button#goView .tt{font-size:26px!important}.home .big button#goView .ic{width:64px!important;height:64px!important}.home .big button#goView .ic svg{width:34px!important;height:34px!important}
+.allbtn{grid-template-columns:1fr 18px!important;grid-template-rows:auto auto;padding:18px 16px!important}.allbtn .tt{grid-column:1;grid-row:1;writing-mode:horizontal-tb}.allbtn small{grid-column:1;grid-row:2}.allbtn .chev{grid-column:2;grid-row:1/3;align-self:center}
+</style></head>
+<body>
+<header><button id="back" hidden aria-label="前の画面に戻る">‹ 戻る</button><b id="htitle">casa シフト</b><span class="sp"></span><button id="who" hidden></button><button class="link" id="logout" hidden>ログアウト</button></header>
+<main id="app"><div class="card hint">読み込み中…</div></main>
+<div class="bar" id="bar" hidden><div class="sum" id="sum"></div><button class="primary" id="send">送信する</button></div>
+<script type="application/json" id="pre">{}</script>
+<script>document.getElementById("pre").textContent=JSON.stringify({n:(new URLSearchParams(location.search).get("n")||"").slice(0,20)});</script>
+<script>
+const PRE = (() => { try { return JSON.parse(document.getElementById('pre').textContent); } catch (e) { return {}; } })(); /* 別の店から切り替えてきたときの名前 */
+const $ = s => document.querySelector(s); const app = $('#app'); let S = { init: null, ses: null, name: null, data: null, vals: [], mode: 'days', tpl: null };
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const toast = (m, ms) => { const t = document.createElement('div'); t.className = 'toast'; t.textContent = m; document.body.appendChild(t); setTimeout(() => t.remove(), ms || 2600); };
+const call = (fn, ...a) => new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(e => rej(e && e.message ? e : new Error(String(e))))[fn](...a));
+const setBack = fn => { const b = $('#back'); b.hidden = !fn; b.onclick = fn || null; if (fn) app.classList.remove('home'); }; /* 上の「‹ 戻る」。ホームとログインでは出さない */
+const store = { get: k => { try { return localStorage.getItem('casa-' + k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem('casa-' + k, v); } catch (e) {} } };
+
+const NEW_URL = { '上野': 'https://rhtcinema-boop.github.io/casa-shift/ueno/', '札幌': 'https://rhtcinema-boop.github.io/casa-shift/sapporo/', '渋谷': 'https://rhtcinema-boop.github.io/casa-shift/shibuya/' }; /* 2026-10-27: script.google.com はiPhoneで開けないことがあるので、ホーム画面用の新しいURLへ案内 */
+async function start() {
+  try { S.init = await call('portal_init'); } catch (e) { app.innerHTML = `<div class="card err">${esc(e.message)}</div>`; return; }
+  try { const s = JSON.parse(localStorage.getItem('casa-ses') || 'null'); if (s) { S.ses = s.ses; S.name = s.name; S.tpl = s.tpl; } } catch (e) {}
+  if (!window.CASA_STATIC) { const nu = NEW_URL[S.init && S.init.stores && (S.init.stores.find(s => s.current) || {}).name]; if (nu) { const b = document.createElement('a'); b.href = nu; b.target = '_top'; b.style.cssText = 'display:block;margin:8px 12px 0;padding:10px 12px;border-radius:12px;background:#FFF4E5;color:#8A4B00;font:600 13px -apple-system,sans-serif;text-decoration:none'; b.textContent = '📱 新しいアドレスができました（ホーム画面に追加できる版）→ こちらを開く'; app.parentNode.insertBefore(b, app); } }
+  S.ses ? home() : login();
+}
+function login(msg) {
+  $('#bar').hidden = true; $('#logout').hidden = true; $('#who').textContent = ''; $('#who').hidden = true; setBack(null); app.classList.remove('home');
+  const last = store.get('name') || '';
+  app.innerHTML = `<h1>ログイン</h1><div class="card">
+    <label>名前<select id="nm"><option value="">選んでください</option>${S.init.names.map(n => `<option ${n === last ? 'selected' : ''}>${esc(n)}</option>`).join('')}<option value="__new">一覧に名前がない（新しく登録）</option></select></label>
+    <label id="nwrap" hidden>あなたの名前（シフト表と同じ書き方で）<input id="nnew" maxlength="20" autocomplete="name" placeholder="例: さくら"></label>
+    <div id="stwrap" hidden><div class="stt">働いている・働くかもしれない店舗</div>${storeBoxes([], true)}<div class="hint">働いている店舗にチェックして、その店の一覧から自分を選んでください。一覧にいなければ「追加する」で、その店のシフト表（直近の期間）に名前が入ります。</div></div>
+    <label>暗証番号（数字4けた）<input id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="current-password"></label>
+    ${msg ? `<div class="err">${esc(msg)}</div>` : ''}
+    <button class="primary" id="go">ログイン</button>
+    <div class="hint">はじめての人は、ここで決めた4けたの番号があなたの暗証番号になります。忘れたら店長に言ってください。一覧に名前がない人は「新しく登録」から登録できます。</div></div>`;
+  $('#nm').onchange = () => { const nw = $('#nm').value === '__new'; $('#nwrap').hidden = !nw; $('#stwrap').hidden = !nw || (S.init.stores || []).length < 2; $('#go').textContent = nw ? '登録してログイン' : 'ログイン'; if (nw) $('#nnew').focus(); };
+  wireStoreBoxes(() => $('#nnew').value.trim());
+  if (PRE.n) { const opt = [...$('#nm').options].find(o => o.value === PRE.n); if (opt) $('#nm').value = PRE.n; else { $('#nm').value = '__new'; $('#nnew').value = PRE.n; } $('#nm').onchange(); }
+  $('#go').onclick = async () => { const isNew = $('#nm').value === '__new'; const nm = isNew ? $('#nnew').value.trim() : $('#nm').value, pin = $('#pin').value; if (isNew && !nm) return login('名前を入れてください'); { const miss = storeBoxesMissingName(); if (miss.length) return toast('casa' + miss.join('・') + ' で使う名前を入れてください', 3500); } $('#go').disabled = true;
+    try { const r = await call('portal_login', nm, pin, isNew, isNew ? readStoreBoxes(nm) : null); S.ses = r.session; S.name = r.name; S.tpl = r.template; store.set('name', nm); localStorage.setItem('casa-ses', JSON.stringify({ ses: S.ses, name: S.name, tpl: S.tpl })); if (r.first) toast('暗証番号を登録しました。次回からこの番号でログインします', 3500); const am = addedMsg(r.added); if (am) setTimeout(() => toast(am, 5000), r.first ? 3600 : 0); home(); }
+    catch (e) { login(e.message); } };
+}
+/* 店舗の選択（新規登録と、あとからの変更で共通）: チェック＋その店での名前 */
+function storeBoxes(mine, isNewReg) { const all = (S.init && S.init.stores) || []; return `<div class="stlist">${all.map(s => { const m = mine.find(x => x.name === s.name); const on = s.current || !!m; const staff = s.staff || []; const as = m ? m.as : ''; const isNew = !!as && !staff.includes(as);
+    return `<label class="strow"><input type="checkbox" data-st="${esc(s.name)}" ${on ? 'checked' : ''} ${s.current ? 'disabled' : ''}><span>casa${esc(s.name)}${s.current ? '（この店）' : ''}</span>
+    <select class="stas" data-as="${esc(s.name)}" ${on && !s.current ? '' : 'hidden'} aria-label="casa${esc(s.name)}での名前"><option value="">この店でも同じ名前</option>${staff.map(n => `<option ${as === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}<option value="__new" ${isNew ? 'selected' : ''}>一覧に自分がいない → 追加する</option></select>
+    <input type="text" class="stasNew" data-asnew="${esc(s.name)}" maxlength="20" placeholder="この店舗で使う名前（シフト表に追加されます）" value="${isNew ? esc(as) : ''}" ${on && !s.current && isNew ? '' : 'hidden'}></label>`; }).join('')}</div>`; }
+function wireStoreBoxes() { app.querySelectorAll('.strow input[type=checkbox]').forEach(c => c.onchange = () => { const t = app.querySelector(`.stas[data-as="${c.dataset.st}"]`); const n = app.querySelector(`.stasNew[data-asnew="${c.dataset.st}"]`); if (t) t.hidden = !c.checked || c.disabled; if (n) n.hidden = !c.checked || c.disabled || (t && t.value !== '__new'); });
+  app.querySelectorAll('.strow select.stas').forEach(t => t.onchange = () => { const n = app.querySelector(`.stasNew[data-asnew="${t.dataset.as}"]`); if (n) { n.hidden = t.value !== '__new'; if (!n.hidden) n.focus(); } }); }
+function readStoreBoxes(defName) { return [...app.querySelectorAll('.strow input[type=checkbox]:checked')].map(c => { const t = app.querySelector(`.stas[data-as="${c.dataset.st}"]`); const n = app.querySelector(`.stasNew[data-asnew="${c.dataset.st}"]`); let as = ''; if (t && !t.hidden) as = t.value === '__new' ? (n ? n.value.trim() : '') : t.value.trim(); return { name: c.dataset.st, as: as && as !== defName ? as : '' }; }); }
+function storeBoxesMissingName() { /* 「追加する」を選んだのに名前が空の店 */ return [...app.querySelectorAll('.strow input[type=checkbox]:checked')].map(c => { const t = app.querySelector(`.stas[data-as="${c.dataset.st}"]`); const n = app.querySelector(`.stasNew[data-asnew="${c.dataset.st}"]`); return t && !t.hidden && t.value === '__new' && !(n && n.value.trim()) ? c.dataset.st : null; }).filter(Boolean); }
+/* 登録・保存のときにシフト表へ追加した結果を一言で */
+function addedMsg(added) { const a = (added || []).filter(x => x); if (!a.length) return ''; const ok = a.filter(x => x.ok && !x.existed).map(x => `casa${x.store}（${x.tab || 'シフト表'}）`); const ng = a.filter(x => !x.ok).map(x => `casa${x.store}: ${x.error || '追加できませんでした'}`); return (ok.length ? ok.join('・') + ' に名前を追加しました' : '') + (ng.length ? (ok.length ? '／' : '') + ng.join('／') : ''); }
+function storesScreen() { setBack(home); const h = S.home; app.innerHTML = `<h1>店舗の設定</h1><div class="card"><div class="stt">働いている・働くかもしれない店舗</div>${storeBoxes(h.myStores || [], false)}<div class="hint">働いている店舗にチェックして、その店の一覧から自分を選んでください。一覧にいなければ「追加する」で、その店のシフト表に名前が入ります。別の店のページを初めて開くときは、その店で暗証番号を決めます。</div><button class="primary" id="stSave">保存</button></div>`;
+  wireStoreBoxes(); $('#stSave').onclick = async () => { const b = $('#stSave'); { const miss = storeBoxesMissingName(); if (miss.length) return toast('casa' + miss.join('・') + ' で使う名前を入れてください', 3500); } b.disabled = true; try { const r = await call('portal_setStores', S.ses, readStoreBoxes(S.name)); S.home.myStores = r.stores; const am = addedMsg(r.added); toast(am ? '保存しました。' + am : '保存しました', am ? 5000 : 2600); home(); } catch (e) { b.disabled = false; if (!relogin(e)) toast(e.message); } }; }
+const clk = h => h == null ? '' : (h >= 24 ? '翌' : '') + Math.floor(h % 24) + ':' + (h % 1 ? '30' : '00');
+const mdw = iso => { const d = new Date(iso + 'T00:00:00'); return (d.getMonth() + 1) + '/' + d.getDate() + '(' + '日月火水木金土'[d.getDay()] + ')'; };
+function relogin(e) { if (/ログインし直/.test(e.message)) { localStorage.removeItem('casa-ses'); S.ses = null; login(e.message); return true; } return false; }
+async function home() {
+  $('#who').textContent = S.name + 'さん ▾'; $('#who').hidden = false; $('#logout').hidden = true; $('#bar').hidden = true; setBack(null); app.classList.add('home'); app.innerHTML = '<div class="card hint">読み込み中…</div>';
+  try { S.home = await call('portal_home', S.ses); } catch (e) { if (!relogin(e)) app.innerHTML = `<div class="card err">${esc(e.message)}</div>`; return; }
+  const h = S.home; if ((h.allStores || []).length > 1) { $('#htitle').innerHTML = `<select id="storeSw" aria-label="店舗を切り替え">${h.stores.map(s => `<option value="${esc(s.url)}" data-as="${esc(s.as || '')}" ${s.current ? 'selected' : ''}>casa${esc(s.name)} シフト</option>`).join('')}</select>`; $('#storeSw').onchange = e => { const o = e.target.selectedOptions[0]; const u = o.value; if (u) { const nm = o.dataset.as || S.name; const go = (window.CASA_STATIC_MAP && window.CASA_STATIC_MAP[o.textContent.replace(/^casa| シフト$/g, '')]) || u; window.open(go + (go.includes('?') ? '&' : '?') + 'n=' + encodeURIComponent(nm), '_top'); } }; } else if (h.store) $('#htitle').textContent = 'casa' + h.store + ' シフト';
+  const need = h.wishes.filter(w => w.status === 'open' && !w.submitted);
+  const icCal = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>', icPen = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
+  app.innerHTML = `${h.next ? `<button class="next" id="goNext"><span>次の勤務：${esc(mdw(h.next.iso))} ${clk(h.next.s)}〜${clk(h.next.e)}<small>${esc(h.next.label)}の確定シフト</small></span><span class="arr">›</span></button>` : ''}${h.onSheet === false ? '<div class="card hint">シフト表にまだあなたの名前がありません。<button class="link" id="addMe">シフト表に自分の名前を追加する</button></div>' : ''}${need.map(w => `<button class="warn" data-t="${esc(w.title)}"><span>⚠ ${esc(w.label)}の希望がまだ出ていません<span class="hint">締切 ${esc(mdw(w.close))}・押して提出</span></span><span class="arr">›</span></button>`).join('')}
+  <div class="big"><button class="primary" id="goView"><span class="ic" style="background:#007AFF">${icCal}</span><span class="tt">シフトを見る</span><span class="chev">›</span><small>${h.views.length ? '公開中: ' + esc(h.views.slice(-3).map(v => v.label).join('・')) : 'まだ公開されたシフトはありません'}</small></button>
+  <button id="goWish"><span class="ic" style="background:#34C759">${icPen}</span><span class="tt">希望を出す</span><span class="chev">›</span><small>${h.wishes.filter(w => w.status === 'open').length ? '受付中: ' + esc(h.wishes.filter(w => w.status === 'open').map(w => w.label + (w.submitted ? '（提出済み）' : '')).join('・')) : 'いま受付中の期間はありません'}</small></button></div>`;
+  if ((h.stores || []).length > 1) { const b = document.createElement('button'); b.className = 'allbtn'; b.id = 'goAll'; b.innerHTML = '<span class="tt">全店舗のシフト</span><small>' + esc(h.stores.map(s => s.name).join('・')) + ' をまとめて見る・店舗ごとにカレンダー登録</small><span class="chev">›</span>'; app.appendChild(b); b.onclick = allScreen; }
+  else if (h.multi) { const d = document.createElement('div'); d.className = 'hint center'; d.innerHTML = '他の店舗でも働いている人は、右上の名前 →「店舗の設定」から登録できます'; app.appendChild(d); }
+  const am = $('#addMe'); if (am) am.onclick = async () => { am.disabled = true; try { const r = await call('portal_addName', S.ses, '', S.name); toast(r.existed ? 'もうシフト表に名前があります' : 'シフト表（' + r.tab + '）に名前を追加しました。10分ほどで店長アプリにも入ります', 5000); home(); } catch (e) { am.disabled = false; if (!relogin(e)) toast(e.message, 4000); } };
+  app.querySelectorAll('.warn[data-t]').forEach(b => b.onclick = () => open(b.dataset.t)); const gn = $('#goNext'); if (gn) gn.onclick = () => { const vi = h.views.findIndex(v => v.start <= h.next.iso && h.next.iso <= v.end); S.focusDay = h.next.iso; view(vi >= 0 ? vi : undefined); };
+  $('#goView').onclick = () => view(); $('#goWish').onclick = wishList;
+}
+function wishList() {
+  $('#bar').hidden = true; setBack(home); const ws = S.home.wishes; const st = w => w.status === 'before' ? `<span class="st">${esc(mdw(w.open))}から</span>` : w.status === 'closed' ? '<span class="st">締切済み</span>' : w.submitted ? '<span class="st open">提出済み</span>' : `<span class="st need">未提出・締切${esc(mdw(w.close))}</span>`;
+  app.innerHTML = `<h1>希望を出す</h1><div class="card plist">${ws.length ? ws.map(w => `<button data-t="${esc(w.title)}" ${w.status === 'open' ? '' : 'disabled'}>${esc(w.label)}${st(w)}</button>`).join('') : '<div class="hint">いま受付中の期間はありません。</div>'}</div><button class="link" id="home">← ホームへ</button>`;
+  app.querySelectorAll('[data-t]').forEach(b => b.onclick = () => open(b.dataset.t)); $('#home').onclick = home;
+}
+/* 日付の行: 押すとその日の帯を開く（開いた日だけ描くので軽い） */
+function dayRow(d, x, i) { const n = d.rows.filter(r => r.cells[i] && r.cells[i][0] != null && r.cells[i][1] != null).length; const me = d.rows.find(r => r.me); const mc = me && me.cells[i]; const mine = mc && mc[0] != null ? `<b class="mn">${clk(mc[0])}〜${clk(mc[1])}</b>` : (me ? '<b class="mn off">休み</b>' : '');
+  return `<div class="vday drow ${x.off ? 'we' : ''} ${x.iso === d.today ? 'today' : ''}" data-iso="${x.iso}" data-i="${i}"><button class="dhead" aria-expanded="false"><span class="dd">${esc(x.md)}(${esc(x.wd)})${x.iso === d.today ? ' 今日' : ''}</span>${mine}<small>${n}人</small><span class="chev">›</span></button><div class="dbody" hidden></div></div>`; }
+function openDay(row, d) { const body = row.querySelector('.dbody'); const btn = row.querySelector('.dhead'); const open = body.hidden; if (open && !body.dataset.done) { body.innerHTML = dayGantt(d, d.days[+row.dataset.i], +row.dataset.i); body.dataset.done = '1'; } body.hidden = !open; btn.setAttribute('aria-expanded', String(open)); row.classList.toggle('open', open); }
+/* 1日ぶんの帯（店長アプリの写真と同じ見た目）: 時刻 → 人数 → 名前ごとの帯 */
+function dayGantt(d, x, i) {
+  const rs = d.rows.map(r => ({ name: r.name, me: r.me, c: r.cells[i] })).filter(r => r.c && r.c[0] != null && r.c[1] != null).sort((a, b) => a.c[0] - b.c[0] || a.c[1] - b.c[1]);
+  const head = '', cls = 'gday';
+  if (!rs.length) return `<div class="${cls}"><div class="hint">シフトなし</div></div>`;
+  let t0 = Math.min(17, ...rs.map(r => Math.floor(r.c[0]))), t1 = Math.max(31, ...rs.map(r => Math.ceil(r.c[1]))); t0 = Math.max(5, t0); t1 = Math.min(36, t1);
+  const span = t1 - t0; const pos = t => ((t - t0) / span * 100).toFixed(2) + '%';
+  const hc = []; for (let t = t0; t < t1; t += .5) hc.push(rs.filter(r => r.c[0] <= t && t < r.c[1]).length);
+  let axis = ''; for (let t = t0; t <= t1; t++) axis += `<i style="left:${pos(t)}">${t}</i>`;
+  const heat = hc.map(n => `<i class="h${Math.min(5, n)}">${n || ''}</i>`).join('');
+  const rows = rs.map(r => { const [s, e, f] = r.c; const ld = /L/.test(f || ''), cl = /C/.test(f || ''); const xm = Math.max(s, e - .5); const w1 = ((xm - s) / (e - s) * 100).toFixed(2);
+    return `<div class="grow ${r.me ? 'me' : ''}"><div class="gname">${esc(r.name)}</div><div class="gtrack"><span class="gbar" style="left:${pos(s)};width:calc(${pos(e)} - ${pos(s)})"><span class="g1 ${ld ? 'ld' : ''}" style="width:${w1}%"></span><span class="g2 ${cl ? 'cl' : ''}"></span><em>${clk(s)}〜${clk(e)}</em></span></div></div>`; }).join('');
+  return `<div class="${cls}">${head}<div class="grow gaxis"><div class="gname"></div><div class="gtrack">${axis}</div></div><div class="grow gheat"><div class="gname">人数</div><div class="gtrack" style="grid-template-columns:repeat(${hc.length},1fr)">${heat}</div></div>${rows}</div>`;
+}
+async function view(idx) {
+  $('#bar').hidden = true; setBack(home); const vs = S.home.views; if (!vs.length) { app.innerHTML = '<h1>シフトを見る</h1><div class="card hint">まだ公開されたシフトはありません。</div><button class="link" id="home">← ホームへ</button>'; $('#home').onclick = home; return; }
+  const t = S.home.today; let ci = vs.findIndex(v => v.start <= t && t <= v.end); if (ci < 0) { ci = vs.findIndex(v => v.start > t); if (ci < 0) ci = vs.length - 1; }
+  if (idx == null) idx = ci; const tabs = [[ci - 1, '前回'], [ci, '今回'], [ci + 1, '次']].filter(([i]) => vs[i]);
+  const ck = 'casa-view:' + vs[idx].title; let d = null; try { d = JSON.parse(sessionStorage.getItem(ck) || 'null'); } catch (e) {}
+  if (!d) { app.innerHTML = '<div class="card hint">読み込み中…</div>'; try { d = await call('portal_view', S.ses, vs[idx].title); try { sessionStorage.setItem(ck, JSON.stringify(d)); } catch (e) {} } catch (e) { if (!relogin(e)) { app.innerHTML = `<div class="card err">${esc(e.message)}</div><button class="link" id="home">← ホームへ</button>`; $('#home').onclick = home; } return; } }
+  else { const myIdx = idx; call('portal_view', S.ses, vs[idx].title).then(nd => { const js = JSON.stringify(nd); let old = null; try { old = sessionStorage.getItem(ck); } catch (e) {} if (js === old) return; try { sessionStorage.setItem(ck, js); } catch (e) {} if (S.viewIdx === myIdx && app.querySelector('.drow')) { const o = app.querySelector('.drow.open'); S.focusDay = o ? o.dataset.iso : null; view(myIdx); } }).catch(e => { /* 公開をやめた・ログイン切れなど: 覚えていた分は捨てて案内を出す */ try { sessionStorage.removeItem(ck); } catch (x) {} if (S.viewIdx !== myIdx) return; if (!relogin(e)) { app.innerHTML = `<div class="card err">${esc(e.message)}</div><button class="link" id="home">← ホームへ</button>`; $('#home').onclick = home; } }); } /* 覚えていた内容をすぐ出し、裏で最新に差し替える */
+  S.viewIdx = idx;
+  const me = d.rows.find(r => r.me); const mine = me ? d.days.map((x, i) => me.cells[i] ? `<span class="${x.off ? 'we' : ''}">${esc(x.md)}(${esc(x.wd)})</span><b>${clk(me.cells[i][0])}〜${clk(me.cells[i][1])}</b>` : '').join('') : '';
+  app.innerHTML = `<div class="seg">${tabs.map(([i, l]) => `<button data-i="${i}" class="${i === idx ? 'on' : ''}">${l}<br><small>${esc(vs[i].label)}</small></button>`).join('')}</div>
+  <div class="card"><b>${esc(S.name)}さんのシフト（${esc(d.label)}）</b>${mine ? `<div class="mine">${mine}</div>` : '<div class="hint">この期間のシフトはありません。</div>'}<button class="primary" id="cal">スマホのカレンダーに入れる</button></div>
+  <div class="card"><b>みんなのシフト</b><div class="legend"><i class="lg g"></i>勤務<i class="lg b"></i>時間帯責任者<i class="lg r"></i>締め（最後の30分）</div><div class="hint">日付を押すとその日の帯が出ます</div>${d.days.map((x, i) => dayRow(d, x, i)).join('')}</div>
+  <button class="link" id="home">← ホームへ</button>`;
+  app.querySelectorAll('.seg [data-i]').forEach(b => b.onclick = () => view(+b.dataset.i)); $('#home').onclick = home; $('#cal').onclick = () => calendar();
+  app.querySelectorAll('.drow .dhead').forEach(b => b.onclick = () => openDay(b.closest('.drow'), d));
+  const fd = S.focusDay && app.querySelector(`.vday[data-iso="${S.focusDay}"]`); S.focusDay = null; const td = fd || app.querySelector('.vday.today'); if (td) { openDay(td, d); td.scrollIntoView({ block: 'start' }); if (fd) { fd.classList.add('flash'); } }
+}
+async function allScreen() {
+  $('#bar').hidden = true; setBack(home); app.innerHTML = '<div class="card hint">読み込み中…（店舗ごとに読みに行きます）</div>';
+  let r; try { r = await call('portal_all', S.ses); } catch (e) { if (!relogin(e)) { app.innerHTML = `<div class="card err">${esc(e.message)}</div><button class="link" id="home">← ホームへ</button>`; $('#home').onclick = home; } return; }
+  const today = r.today; const up = []; (r.stores || []).forEach(s => (s.shifts || []).forEach(x => { if (x.iso >= today) up.push(Object.assign({ store: s.store }, x)); })); up.sort((a, b) => a.iso.localeCompare(b.iso) || a.s - b.s);
+  const role = x => (/L/.test(x.role || '') ? '<i class="rl">責任者</i>' : '') + (/C/.test(x.role || '') ? '<i class="rc">締め</i>' : '');
+  app.innerHTML = `<h1>全店舗のシフト</h1>
+  <div class="card"><b>これからの勤務（全店舗）</b>${up.length ? `<div class="mine all">${up.slice(0, 60).map(x => `<span class="${/[土日]/.test(mdw(x.iso)) ? 'we' : ''}">${esc(mdw(x.iso))}</span><b><em class="stb">${esc(x.store)}</em>${clk(x.s)}〜${clk(x.e)}${role(x)}</b>`).join('')}</div>` : '<div class="hint">公開されているシフトに、これからの勤務はありません。</div>'}</div>
+  ${(r.stores || []).map(s => `<div class="card"><b>casa${esc(s.store)}<small class="hint" style="margin-left:6px;font-weight:400">${esc(s.name)}さん</small></b>${s.error ? `<div class="err">${esc(s.error)}</div>` : `<div class="hint">${s.published && s.published.length ? '公開中: ' + esc(s.published.slice(-3).join('・')) : 'まだ公開されたシフトはありません'}${s.onSheet === false ? '<br>この店のシフト表に名前がありません（店舗の設定で「追加する」を選べます）' : ''}</div>`}<div class="row"><button class="primary" data-cal="${esc(s.store)}" ${s.error ? 'disabled' : ''}>スマホのカレンダーに入れる（${esc(s.store)}）</button>${!s.current && s.url ? `<a href="${esc(s.url)}${s.url.includes('?') ? '&' : '?'}n=${encodeURIComponent(s.name || '')}" target="_top"><button>この店のページを開く</button></a>` : ''}</div></div>`).join('')}
+  <button class="link" id="home">← ホームへ</button>`;
+  $('#home').onclick = home; app.querySelectorAll('[data-cal]').forEach(b => b.onclick = () => calendar(b.dataset.cal, allScreen));
+}
+function calendar(storeName, backFn) { /* 自分のスマホのカレンダーにシフトを入れる（2026-10-24 わかりやすく作り直し: 端末に合わせたボタン1つで登録、細かい設定は「ほかのやり方」に） */
+  const back = backFn || (() => view()); setBack(back); const h = S.home; const own = !storeName || storeName === h.store; const def = own && h.calTitle ? h.calTitle : ('casa' + (storeName || h.store || '') + ' 出勤');
+  const ua = navigator.userAgent; const isIOS = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document); const isAndroid = /Android/.test(ua);
+  app.innerHTML = `<h1>スマホのカレンダーに入れる</h1>
+    <div class="card calhero"><div class="calbig">📅</div><b>1回登録すれば、あとは自動</b><div class="hint">${own ? '' : 'casa' + esc(storeName) + 'の'}公開された確定シフトのうち、<b>あなたの勤務だけ</b>がカレンダーに入ります。新しいシフトが公開されると自動で増えます。</div></div>
+    <div id="cmain"><div class="card hint">準備中…</div></div>
+    <details class="card calmore"><summary>ほかのやり方・名前を変える</summary>
+      <label>予定の名前<input id="ctitle" value="${esc(def)}" maxlength="40"></label><button id="cname">この名前にする</button>
+      <div class="hint" style="margin-top:10px">うまくいかない時は、下のURLを使うカレンダーアプリの「URLで購読」「照会するカレンダーを追加」に貼ってください。</div>
+      <div class="copy" id="curl">—</div><div class="row"><button id="ccopy">URLをコピー</button><button id="cshare">ほかのアプリで開く</button></div>
+      <div class="row"><a id="cfile" href="#"><button style="width:100%">今のシフトを1回だけ入れる（ファイル）</button></a></div><div class="hint">「1回だけ」は自動で更新されません。2回押すと同じ予定が2つ入ります。</div>
+    </details>
+    <button class="link" id="back">${own ? '← シフトに戻る' : '← 全店舗のシフトに戻る'}</button>`;
+  $('#back').onclick = back; let r = null;
+  const draw = () => { const webcal = r.url.replace(/^https:/, 'webcal:'); const gcal = 'https://calendar.google.com/calendar/render?cid=' + encodeURIComponent(webcal);
+    const ios = `<a class="calbtn" href="${esc(webcal)}"><button class="primary">iPhoneのカレンダーに入れる</button></a><ol class="steps"><li>上のボタンを押す</li><li>「照会しますか？」と出たら <b>照会</b></li><li>右上の <b>追加</b> を押して終わり</li></ol>`;
+    const goo = `<a class="calbtn" href="${esc(gcal)}" target="_blank" rel="noopener"><button class="${isIOS ? '' : 'primary'}">Googleカレンダーに入れる</button></a><ol class="steps"><li>上のボタンを押す（Googleカレンダーが開きます）</li><li>「カレンダーを追加しますか？」で <b>追加</b></li><li>スマホのGoogleカレンダーにも数分〜数時間で出ます</li></ol>`;
+    $('#cmain').innerHTML = `<div class="card"><b>${isIOS ? 'iPhone の人はこちら' : isAndroid ? 'Android の人はこちら' : 'カレンダーを選んでください'}</b>${isIOS ? ios : goo}</div><div class="card"><b>${isIOS ? 'Googleカレンダーを使っている人' : 'iPhone のカレンダーを使っている人'}</b>${isIOS ? goo : ios}</div>`;
+    $('#curl').textContent = r.url; $('#cfile').href = r.dl; };
+  const load = async () => { try { r = await call('portal_calFor', S.ses, own ? '' : storeName, $('#ctitle').value); if (own) S.home.calTitle = r.title; draw(); } catch (e) { if (!relogin(e)) $('#cmain').innerHTML = `<div class="card err">${esc(e.message)}</div>`; } };
+  load();
+  $('#cname').onclick = async () => { const b = $('#cname'); b.disabled = true; await load(); b.disabled = false; toast('名前を変えました。もう一度上のボタンから入れてください'); };
+  $('#ccopy').onclick = () => { if (!r) return; navigator.clipboard.writeText(r.url).then(() => toast('コピーしました'), () => toast('URLを長押ししてコピーしてください')); };
+  $('#cshare').onclick = async () => { if (!r) return; if (!navigator.share) { toast('この端末では使えません。URLをコピーしてください', 4000); return; } try { const res = await fetch(r.dl); const blob = await res.blob(); const file = new File([blob], 'casa-shift.ics', { type: 'text/calendar' }); if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: r.title }); return; } } catch (e) { if (e && e.name === 'AbortError') return; } try { await navigator.share({ title: r.title, url: r.url }); } catch (e) {} };
+}
+async function open(title) {
+  setBack(wishList); app.innerHTML = '<div class="card hint">読み込み中…</div>';
+  try { S.data = await call('portal_get', S.ses, title); } catch (e) { if (/ログインし直/.test(e.message)) { localStorage.removeItem('casa-ses'); S.ses = null; return login(e.message); } app.innerHTML = `<div class="card err">${esc(e.message)}</div><button id="back">戻る</button>`; $('#back').onclick = wishList; return; }
+  S.tpl = S.data.template || S.tpl; S.vals = S.data.mine.slice(); S.memo = S.data.memo || ''; render();
+}
+function render() {
+  const d = S.data, pre = S.init.presets; const opts = '<option value="">よく使う時間から選ぶ…</option>' + pre.map(p => `<option>${p}</option>`).join('') + '<option value="休">休み</option><option value="__clear">消す</option>';
+  app.innerHTML = `<h1>${esc(d.title.replace('希望', ''))} の希望</h1>${d.close ? `<div class="hint">締切 ${esc(mdw(d.close))}</div>` : ''}
+  <div class="card"><b>かんたん入力</b>
+    <div class="seg"><button data-mode="days" class="${S.mode === 'days' ? 'on' : ''}">日ごとに入力</button><button data-mode="off" class="${S.mode === 'off' ? 'on' : ''}">休みだけ選ぶ</button></div>
+    ${S.mode === 'off' ? `<div class="hint">出られない日をタップ（赤）。残りの日は下の時間で埋めます。</div><div class="row"><select id="base">${pre.map(p => `<option>${p}</option>`).join('')}<option value="__custom">手入力（時間を打つ）</option></select><span class="man" id="baseMan" hidden><input inputmode="decimal" placeholder="入り 例 17.5"><input inputmode="decimal" placeholder="終わり 例 23"></span><button class="primary" id="fillOff">残りを埋める</button></div>`
+    : `<div class="chips" id="dows">${['月', '火', '水', '木', '金', '土', '日'].map((w, i) => `<button class="chip" data-dow="${(i + 1) % 7}">${w}</button>`).join('')}<button class="chip" data-g="wd">平日</button><button class="chip" data-g="we">土日祝</button><button class="chip" data-g="all">全部</button></div>
+      <div class="row"><select id="bulkT">${pre.map(p => `<option>${p}</option>`).join('')}<option value="__custom">手入力（時間を打つ）</option><option value="休">休み</option></select><span class="man" id="bulkMan" hidden><input inputmode="decimal" placeholder="入り 例 17.5"><input inputmode="decimal" placeholder="終わり 例 23"></span><button class="primary" id="bulk">選んだ曜日に入れる</button></div>`}
+    <div class="row"><button id="tplUse" ${S.tpl && Object.keys(S.tpl).length ? '' : 'disabled'}>いつものテンプレ</button><button id="prev" ${d.prev ? '' : 'disabled'}>前回（${d.prev ? esc(d.prev.label) : 'なし'}）と同じ</button></div>
+    <div class="row"><button id="tplSave">今の内容をテンプレに保存</button><button id="clr">全部消す</button></div>
+  </div>
+  <div class="card ${S.mode === 'off' ? 'offmode' : ''}" id="days"><div class="hint">時間はシフト表と同じ書き方（17.5＝17:30、25＝翌1時、31＝翌7時）</div>
+    ${d.days.map((x, i) => { const v = S.vals[i] || ''; const off = v === '休'; const [a, b] = off || !v ? ['', ''] : v.split('-');
+      return `<div class="day ${x.off ? 'we' : ''} ${off ? 'isoff' : ''}" data-i="${i}"><div class="dt">${esc(x.md)}<small>${esc(x.wd)}</small></div><input inputmode="decimal" data-f="s" value="${esc(a)}" class="${a ? 'has' : ''}" placeholder="入り"><input inputmode="decimal" data-f="e" value="${esc(b)}" class="${b ? 'has' : ''}" placeholder="終わり"><button class="offb" data-off>休</button><select class="pick">${opts}</select></div>`; }).join('')}
+  </div>
+  <div class="card"><b>店長へのメモ（なくてもOK）</b><textarea id="memo" maxlength="500" placeholder="例: 土曜は21時まで／今月は少なめ希望／テスト期間は休みたい">${esc(S.memo || '')}</textarea></div>
+  <button class="link" id="other">← 期間を選び直す</button>`;
+  $('#bar').hidden = false; sum();
+  app.querySelectorAll('[data-mode]').forEach(b => b.onclick = () => { S.mode = b.dataset.mode; render(); });
+  app.querySelectorAll('#dows .chip').forEach(c => c.onclick = () => { const g = c.dataset.g; if (g) app.querySelectorAll('#dows [data-dow]').forEach(x => { const k = +x.dataset.dow; x.classList.toggle('on', g === 'all' || (g === 'wd' ? k >= 1 && k <= 5 : k === 0 || k === 6)); }); else c.classList.toggle('on'); S.hol = g === 'we'; });
+  const set = (i, v) => { S.vals[i] = v; const row = app.querySelector(`.day[data-i="${i}"]`); const off = v === '休'; const [a, b] = off || !v ? ['', ''] : v.split('-'); row.classList.toggle('isoff', off); const [s, e] = row.querySelectorAll('input'); s.value = a; e.value = b; s.classList.toggle('has', !!a); e.classList.toggle('has', !!b); sum(); };
+  const manWire = (selId, manId) => { const sel = $(selId), man = $(manId); if (!sel || !man) return; const upd = () => { man.hidden = sel.value !== '__custom'; if (!man.hidden) man.querySelector('input').focus(); }; sel.onchange = upd; if (!pre.length) { sel.value = '__custom'; } upd(); }; manWire('#base', '#baseMan'); manWire('#bulkT', '#bulkMan');
+  const pickVal = (selId, manId) => { /* 選択肢か手入力から「入り-終わり」を作る。だめなら null */ const sel = $(selId); if (sel.value !== '__custom') return sel.value; const [a, b] = [...$(manId).querySelectorAll('input')].map(x => x.value.trim().replace(/[０-９．：]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)).replace(':30', '.5').replace(':00', '')); const n = x => { const v = parseFloat(x); return Number.isFinite(v) && v * 2 === Math.round(v * 2) ? v : NaN; }; const sv = n(a), ev = n(b); if (!a || !b || Number.isNaN(sv) || Number.isNaN(ev)) { toast('入りと終わりを数字で入れてください（例 17.5 と 23）'); return null; } if (sv < 5 || sv > 35.5 || ev < 5 || ev > 36 || ev <= sv) { toast('時間の範囲が合いません（5〜36、終わりは入りより後）'); return null; } return sv + '-' + ev; };
+  if ($('#bulk')) $('#bulk').onclick = () => { const ds = [...app.querySelectorAll('#dows [data-dow].on')].map(x => +x.dataset.dow); if (!ds.length) return toast('曜日を選んでください'); const v = pickVal('#bulkT', '#bulkMan'); if (v == null) return; let n = 0; d.days.forEach((x, i) => { if (ds.includes(x.dow) || (S.hol && x.hol)) { set(i, v); n++; } }); toast(`${n}日に「${v === '休' ? '休み' : v}」を入れました`); };
+  if ($('#fillOff')) $('#fillOff').onclick = () => { const v = pickVal('#base', '#baseMan'); if (v == null) return; d.days.forEach((x, i) => { if (S.vals[i] !== '休') set(i, v); }); toast('休み以外を ' + v + ' で埋めました'); };
+  $('#tplUse').onclick = () => { let n = 0; d.days.forEach((x, i) => { const v = S.tpl[x.dow]; if (v !== undefined) { set(i, v); n++; } }); toast(`テンプレで${n}日を埋めました`); };
+  $('#prev').onclick = () => { let n = 0; d.days.forEach((x, i) => { const v = d.prev.byDow[x.dow]; if (v !== undefined) { set(i, v); n++; } }); toast(n ? `前回の曜日ごとの希望を${n}日に写しました` : '前回の希望が見つかりません'); };
+  $('#tplSave').onclick = async () => { const t = {}; d.days.forEach((x, i) => { if (S.vals[i]) t[x.dow] = S.vals[i]; }); if (!Object.keys(t).length) return toast('先に何日か入力してください'); try { await call('portal_saveTemplate', S.ses, t); S.tpl = t; localStorage.setItem('casa-ses', JSON.stringify({ ses: S.ses, name: S.name, tpl: S.tpl })); toast('曜日ごとのテンプレを保存しました（どのスマホでも使えます）'); $('#tplUse').disabled = false; } catch (e) { toast(e.message); } };
+  $('#clr').onclick = () => d.days.forEach((x, i) => set(i, ''));
+  $('#other').onclick = wishList; $('#memo').oninput = e => { S.memo = e.target.value; };
+  app.querySelectorAll('.day').forEach(row => { const i = +row.dataset.i;
+    row.querySelector('[data-off]').onclick = e => { e.stopPropagation(); set(i, S.vals[i] === '休' ? '' : '休'); };
+    row.querySelector('.pick').onchange = e => { const v = e.target.value; if (v) set(i, v === '__clear' ? '' : v); e.target.value = ''; };
+    row.querySelectorAll('input').forEach(inp => inp.oninput = () => { const [s, e2] = row.querySelectorAll('input'); S.vals[i] = s.value || e2.value ? s.value.trim() + '-' + e2.value.trim() : ''; row.classList.remove('isoff'); inp.classList.toggle('has', !!inp.value); sum(); });
+    row.onclick = e => { if (S.mode !== 'off' || e.target.closest('input,select,button')) return; set(i, S.vals[i] === '休' ? '' : '休'); }; });
+}
+function counts() { let on = 0, off = 0, none = 0; S.vals.forEach(v => { if (v === '休') off++; else if (v && /^\d/.test(v)) on++; else none++; }); return { on, off, none }; }
+function sum() { const c = counts(); const el = $('#sum'); el.classList.remove('armed'); el.textContent = `出勤できる ${c.on}日・休み ${c.off}日・未入力 ${c.none}日`; const b = $('#send'); delete b.dataset.armed; b.textContent = '送信する'; }
+$('#send').onclick = async () => {
+  const b = $('#send'), c = counts();
+  for (let i = 0; i < S.vals.length; i++) { const v = S.vals[i]; if (v && v !== '休' && !/^\d{1,2}(\.5)?-\d{1,2}(\.5)?$/.test(v)) return toast(`${S.data.days[i].md} の時間を「18-25」のように入れてください`, 3500); }
+  for (let i = 0; i < S.vals.length; i++) { const v = S.vals[i]; if (!v || v === '休') continue; const [x, y] = v.split('-').map(Number); if (x < 5 || y > 36 || y <= x || y - x > 20) return toast(`${S.data.days[i].md} の時間を見直してください（終わりは入りより後、25＝翌1時）`, 4000); } // 入りと終わりが逆・長すぎる勤務は送る前に止める
+  if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'もう一度押して送信'; const el = $('#sum'); el.textContent = `出勤できる ${c.on}日／休み ${c.off}日／未入力 ${c.none}日 で送信します${c.none ? '（未入力の日は希望なし）' : ''}`; el.classList.add('armed'); return; }
+  b.disabled = true; b.textContent = '送信中…';
+  try { const r = await call('portal_submit', S.ses, S.data.title, S.vals, S.memo || ''); setBack(home); app.innerHTML = `<div class="card done"><b>送信しました</b>${esc(S.data.title.replace('希望', ''))}：出勤できる ${r.on}日・休み ${r.off}日<div class="hint" style="margin-top:10px">直したいときは、もう一度開いて送り直せば上書きされます。</div>${S.memo ? `<div class="hint">メモ: ${esc(S.memo)}</div>` : ''}<button class="link" id="again">内容を見直す</button><button class="link" id="home2">ホームへ</button></div>`; $('#bar').hidden = true; $('#again').onclick = () => open(S.data.title); $('#home2').onclick = home; }
+  catch (e) { toast(e.message, 4000); if (/ログインし直/.test(e.message)) { localStorage.removeItem('casa-ses'); S.ses = null; login(e.message); } }
+  b.disabled = false; b.textContent = '送信する'; delete b.dataset.armed;
+};
+$('#who').onclick = e => { e.stopPropagation(); let m = document.querySelector('.umenu'); if (m) { m.remove(); return; } m = document.createElement('div'); m.className = 'umenu'; m.innerHTML = ((S.home && (S.home.allStores || []).length > 1) ? '<button id="umStores">店舗の設定</button>' : '') + '<button id="umLogout">ログアウト</button>';
+  const us = m.querySelector('#umStores'); if (us) us.onclick = () => { m.remove(); storesScreen(); }; document.body.appendChild(m); m.querySelector('#umLogout').onclick = () => { m.remove(); $('#logout').onclick(); }; setTimeout(() => document.addEventListener('click', function c(ev) { if (!m.contains(ev.target)) { m.remove(); document.removeEventListener('click', c); } }), 0); };
+$('#logout').onclick = () => { localStorage.removeItem('casa-ses'); S.ses = null; login(); };
+start();
+</script></body></html>
