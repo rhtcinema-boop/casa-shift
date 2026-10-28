@@ -118,8 +118,21 @@ const call = (fn, ...a) => new Promise((res, rej) => google.script.run.withSucce
 const setBack = fn => { const b = $('#back'); b.hidden = !fn; b.onclick = fn || null; if (fn) app.classList.remove('home'); }; /* 上の「‹ 戻る」。ホームとログインでは出さない */
 const store = { get: k => { try { return localStorage.getItem('casa-' + k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem('casa-' + k, v); } catch (e) {} } };
 
-const NEW_URL = { '上野': 'https://rhtcinema-boop.github.io/casa-shift/ueno/', '札幌': 'https://rhtcinema-boop.github.io/casa-shift/sapporo/', '渋谷': 'https://rhtcinema-boop.github.io/casa-shift/shibuya/' }; /* 2026-10-27: script.google.com はiPhoneで開けないことがあるので、ホーム画面用の新しいURLへ案内 */
+const NEW_URL = { '上野': 'https://rhtcinema-boop.github.io/casa-shift/ueno/?openExternalBrowser=1', '札幌': 'https://rhtcinema-boop.github.io/casa-shift/sapporo/?openExternalBrowser=1', '渋谷': 'https://rhtcinema-boop.github.io/casa-shift/shibuya/?openExternalBrowser=1' }; /* ?openExternalBrowser=1 … LINEの中で押してもSafari（外のブラウザ）で開く（2026-10-28） */
+/* ホーム画面に追加の案内（GitHub Pages 版だけ）: LINE等のアプリ内ブラウザでは追加できないので外のブラウザへ。Safariで開いていてまだ追加していない人には手順を出す */
+function a2hsGuide() { if (!window.CASA_STATIC) return; const ua = navigator.userAgent; const isLine = /\bLine\//i.test(ua); const inApp = isLine || /FBAN|FBAV|Instagram|Twitter|MicroMessenger|KAKAOTALK|YJApp/i.test(ua);
+  const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); const standalone = window.navigator.standalone || matchMedia('(display-mode: standalone)').matches; if (standalone) return;
+  if (isLine && !/openExternalBrowser=1/.test(location.search)) { location.replace(location.pathname + (location.search ? location.search + '&' : '?') + 'openExternalBrowser=1' + location.hash); return 'redirect'; } /* LINEの中 → Safariで開き直す */
+  let dismissed = false; try { dismissed = localStorage.getItem('casa-a2hs-off') === '1'; } catch (e) {} if (dismissed && !inApp) return;
+  const b = document.createElement('div'); b.style.cssText = 'margin:8px 12px 0;padding:10px 12px;border-radius:12px;background:#FFF4E5;color:#7A4100;font:500 13px/1.6 -apple-system,sans-serif;position:relative';
+  const step = s => '<b style="color:#C2410C">' + s + '</b>'; const shareIc = '<svg viewBox="0 0 24 24" width="15" height="15" style="vertical-align:-2px" fill="none" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 7l4-4 4 4M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/></svg>';
+  if (inApp) b.innerHTML = '📱 <b>アプリにするには、Safariで開いてください</b><br>' + (isLine ? '右下の ' + step('︙') + ' か ' + shareIc + ' →「' + step('Safariで開く') + '」' : '右上か右下のメニュー →「' + step(ios ? 'Safariで開く' : 'ブラウザで開く') + '」') + '<br><span style="font-size:12px;opacity:.8">このアプリの中のままだと「ホーム画面に追加」が出ません</span>';
+  else if (ios) b.innerHTML = '📱 <b>アプリにする方法</b>（1回だけ）<br>下の ' + shareIc + ' 共有ボタン →「' + step('ホーム画面に追加') + '」→ 右上の「' + step('追加') + '」<br><span style="font-size:12px;opacity:.8">メニューに無い時は、メニューを下にスクロールしてください</span>';
+  else b.innerHTML = '📱 <b>アプリにする方法</b>（1回だけ）<br>右上の ' + step('︙') + ' →「' + step('ホーム画面に追加') + '」';
+  if (!inApp) { const x = document.createElement('button'); x.textContent = '×'; x.setAttribute('aria-label', '閉じる'); x.style.cssText = 'position:absolute;top:4px;right:6px;border:0;background:none;font-size:18px;color:#7A4100;cursor:pointer;padding:4px 8px'; x.onclick = () => { try { localStorage.setItem('casa-a2hs-off', '1'); } catch (e) {} b.remove(); }; b.appendChild(x); }
+  app.parentNode.insertBefore(b, app); } /* 2026-10-27: script.google.com はiPhoneで開けないことがあるので、ホーム画面用の新しいURLへ案内 */
 async function start() {
+  if (a2hsGuide() === 'redirect') return;
   try { S.init = await call('portal_init'); } catch (e) { app.innerHTML = `<div class="card err">${esc(e.message)}</div>`; return; }
   try { const s = JSON.parse(localStorage.getItem('casa-ses') || 'null'); if (s) { S.ses = s.ses; S.name = s.name; S.tpl = s.tpl; } } catch (e) {}
   if (!window.CASA_STATIC) { const nu = NEW_URL[S.init && S.init.stores && (S.init.stores.find(s => s.current) || {}).name]; if (nu) { const b = document.createElement('a'); b.href = nu; b.target = '_top'; b.style.cssText = 'display:block;margin:8px 12px 0;padding:10px 12px;border-radius:12px;background:#FFF4E5;color:#8A4B00;font:600 13px -apple-system,sans-serif;text-decoration:none'; b.textContent = '📱 新しいアドレスができました（ホーム画面に追加できる版）→ こちらを開く'; app.parentNode.insertBefore(b, app); } }
