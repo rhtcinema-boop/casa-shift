@@ -120,23 +120,32 @@ const store = { get: k => { try { return localStorage.getItem('casa-' + k); } ca
 
 const NEW_URL = { '上野': 'https://rhtcinema-boop.github.io/casa-shift/ueno/?openExternalBrowser=1', '札幌': 'https://rhtcinema-boop.github.io/casa-shift/sapporo/?openExternalBrowser=1', '渋谷': 'https://rhtcinema-boop.github.io/casa-shift/shibuya/?openExternalBrowser=1' }; /* ?openExternalBrowser=1 … LINEの中で押してもSafari（外のブラウザ）で開く（2026-10-28） */
 /* ホーム画面に追加の案内（GitHub Pages 版だけ）: LINE等のアプリ内ブラウザでは追加できないので外のブラウザへ。Safariで開いていてまだ追加していない人には手順を出す */
-function a2hsGuide() { if (!window.CASA_STATIC) return; const ua = navigator.userAgent; const isLine = /\bLine\//i.test(ua); const inApp = isLine || /FBAN|FBAV|Instagram|Twitter|MicroMessenger|KAKAOTALK|YJApp/i.test(ua);
+function a2hsGuide(onlyRedirect) { if (!window.CASA_STATIC) return; const ua = navigator.userAgent; const isLine = /\bLine\//i.test(ua); const inApp = isLine || /FBAN|FBAV|Instagram|Twitter|MicroMessenger|KAKAOTALK|YJApp/i.test(ua);
   const ios = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1); const standalone = window.navigator.standalone || matchMedia('(display-mode: standalone)').matches; if (standalone) return;
   if (isLine && !/openExternalBrowser=1/.test(location.search)) { location.replace(location.pathname + (location.search ? location.search + '&' : '?') + 'openExternalBrowser=1' + location.hash); return 'redirect'; } /* LINEの中 → Safariで開き直す */
+  if (onlyRedirect) return; const old = document.getElementById('a2hs'); if (old) old.remove();
   let dismissed = false; try { dismissed = localStorage.getItem('casa-a2hs-off') === '1'; } catch (e) {} if (dismissed && !inApp) return;
-  const b = document.createElement('div'); b.style.cssText = 'margin:8px 12px 0;padding:10px 12px;border-radius:12px;background:#FFF4E5;color:#7A4100;font:500 13px/1.6 -apple-system,sans-serif;position:relative';
+  const b = document.createElement('div'); b.id = 'a2hs'; b.style.cssText = 'margin:8px 12px 0;padding:10px 12px;border-radius:12px;background:#FFF4E5;color:#7A4100;font:500 13px/1.6 -apple-system,sans-serif;position:relative';
   const step = s => '<b style="color:#C2410C">' + s + '</b>'; const shareIc = '<svg viewBox="0 0 24 24" width="15" height="15" style="vertical-align:-2px" fill="none" stroke="#007AFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12M8 7l4-4 4 4M5 11v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-8"/></svg>';
   if (inApp) b.innerHTML = '📱 <b>アプリにするには、Safariで開いてください</b><br>' + (isLine ? '右下の ' + step('︙') + ' か ' + shareIc + ' →「' + step('Safariで開く') + '」' : '右上か右下のメニュー →「' + step(ios ? 'Safariで開く' : 'ブラウザで開く') + '」') + '<br><span style="font-size:12px;opacity:.8">このアプリの中のままだと「ホーム画面に追加」が出ません</span>';
-  else if (ios) b.innerHTML = '📱 <b>アプリにする方法</b>（1回だけ）<br>下の ' + shareIc + ' 共有ボタン →「' + step('ホーム画面に追加') + '」→ 右上の「' + step('追加') + '」<br><span style="font-size:12px;opacity:.8">メニューに無い時は、メニューを下にスクロールしてください</span>';
+  else if (ios) b.innerHTML = '📱 <b>アプリにする方法</b>（1回だけ）<br>下の ' + shareIc + ' 共有ボタン →「' + step('ホーム画面に追加') + '」→ 右上の「' + step('追加') + '」<br><span style="font-size:12px;opacity:.8">いまログインした状態で追加すると、次からログインなしで開けます。メニューに無い時は下にスクロール</span>';
   else b.innerHTML = '📱 <b>アプリにする方法</b>（1回だけ）<br>右上の ' + step('︙') + ' →「' + step('ホーム画面に追加') + '」';
   if (!inApp) { const x = document.createElement('button'); x.textContent = '×'; x.setAttribute('aria-label', '閉じる'); x.style.cssText = 'position:absolute;top:4px;right:6px;border:0;background:none;font-size:18px;color:#7A4100;cursor:pointer;padding:4px 8px'; x.onclick = () => { try { localStorage.setItem('casa-a2hs-off', '1'); } catch (e) {} b.remove(); }; b.appendChild(x); }
   app.parentNode.insertBefore(b, app); } /* 2026-10-27: script.google.com はiPhoneで開けないことがあるので、ホーム画面用の新しいURLへ案内 */
+/* 端末キー（?k= と localStorage）。ホーム画面アプリは Safari と保存領域が別なので、URLにも持たせる（ログイン後に追加すればアイコンのURLに入る） */
+function devKey() { try { return new URLSearchParams(location.search).get('k') || localStorage.getItem('casa-dev') || ''; } catch (e) { return new URLSearchParams(location.search).get('k') || ''; } }
+function devKeep(k) { if (!k) return; try { localStorage.setItem('casa-dev', k); } catch (e) {} if (window.CASA_STATIC) { try { const u = new URL(location.href); if (u.searchParams.get('k') !== k) { u.searchParams.set('k', k); history.replaceState(null, '', u.toString()); } } catch (e) {} } }
+function devClear() { try { localStorage.removeItem('casa-dev'); } catch (e) {} if (window.CASA_STATIC) { try { const u = new URL(location.href); u.searchParams.delete('k'); history.replaceState(null, '', u.toString()); } catch (e) {} } }
+async function resume() { const k = devKey(); if (!k) return false; try { const r = await call('portal_resume', k); S.ses = r.session; S.name = r.name; S.tpl = r.template; store.set('name', r.name); try { localStorage.setItem('casa-ses', JSON.stringify({ ses: S.ses, name: S.name, tpl: S.tpl })); } catch (e) {} devKeep(k); return true; } catch (e) { if (/ログインし直/.test(e.message)) devClear(); return false; } }
+async function resumeOrLogin(msg) { if (await resume()) return home(); login(msg); }
 async function start() {
-  if (a2hsGuide() === 'redirect') return;
+  if (a2hsGuide(true) === 'redirect') return;
   try { S.init = await call('portal_init'); } catch (e) { app.innerHTML = `<div class="card err">${esc(e.message)}</div>`; return; }
   try { const s = JSON.parse(localStorage.getItem('casa-ses') || 'null'); if (s) { S.ses = s.ses; S.name = s.name; S.tpl = s.tpl; } } catch (e) {}
   if (!window.CASA_STATIC) { const nu = NEW_URL[S.init && S.init.stores && (S.init.stores.find(s => s.current) || {}).name]; if (nu) { const b = document.createElement('a'); b.href = nu; b.target = '_top'; b.style.cssText = 'display:block;margin:8px 12px 0;padding:10px 12px;border-radius:12px;background:#FFF4E5;color:#8A4B00;font:600 13px -apple-system,sans-serif;text-decoration:none'; b.textContent = '📱 新しいアドレスができました（ホーム画面に追加できる版）→ こちらを開く'; app.parentNode.insertBefore(b, app); } }
-  S.ses ? home() : login();
+  if (S.ses) { devKeep(devKey()); return home(); }
+  if (await resume()) return home();
+  login();
 }
 function login(msg) {
   $('#bar').hidden = true; $('#logout').hidden = true; $('#who').textContent = ''; $('#who').hidden = true; setBack(null); app.classList.remove('home');
@@ -153,7 +162,7 @@ function login(msg) {
   wireStoreBoxes(() => $('#nnew').value.trim());
   if (PRE.n) { const opt = [...$('#nm').options].find(o => o.value === PRE.n); if (opt) $('#nm').value = PRE.n; else { $('#nm').value = '__new'; $('#nnew').value = PRE.n; } $('#nm').onchange(); }
   $('#go').onclick = async () => { const isNew = $('#nm').value === '__new'; const nm = isNew ? $('#nnew').value.trim() : $('#nm').value, pin = $('#pin').value; if (isNew && !nm) return login('名前を入れてください'); { const miss = storeBoxesMissingName(); if (miss.length) return toast('casa' + miss.join('・') + ' で使う名前を入れてください', 3500); } $('#go').disabled = true;
-    try { const r = await call('portal_login', nm, pin, isNew, isNew ? readStoreBoxes(nm) : null); S.ses = r.session; S.name = r.name; S.tpl = r.template; store.set('name', nm); localStorage.setItem('casa-ses', JSON.stringify({ ses: S.ses, name: S.name, tpl: S.tpl })); if (r.first) toast('暗証番号を登録しました。次回からこの番号でログインします', 3500); const am = addedMsg(r.added); if (am) setTimeout(() => toast(am, 5000), r.first ? 3600 : 0); home(); }
+    try { const r = await call('portal_login', nm, pin, isNew, isNew ? readStoreBoxes(nm) : null); S.ses = r.session; S.name = r.name; S.tpl = r.template; store.set('name', nm); devKeep(r.dev); localStorage.setItem('casa-ses', JSON.stringify({ ses: S.ses, name: S.name, tpl: S.tpl })); if (r.first) toast('暗証番号を登録しました。次回からこの番号でログインします', 3500); const am = addedMsg(r.added); if (am) setTimeout(() => toast(am, 5000), r.first ? 3600 : 0); home(); }
     catch (e) { login(e.message); } };
 }
 /* 店舗の選択（新規登録と、あとからの変更で共通）: チェック＋その店での名前 */
@@ -171,8 +180,9 @@ function storesScreen() { setBack(home); const h = S.home; app.innerHTML = `<h1>
   wireStoreBoxes(); $('#stSave').onclick = async () => { const b = $('#stSave'); { const miss = storeBoxesMissingName(); if (miss.length) return toast('casa' + miss.join('・') + ' で使う名前を入れてください', 3500); } b.disabled = true; try { const r = await call('portal_setStores', S.ses, readStoreBoxes(S.name)); S.home.myStores = r.stores; const am = addedMsg(r.added); toast(am ? '保存しました。' + am : '保存しました', am ? 5000 : 2600); home(); } catch (e) { b.disabled = false; if (!relogin(e)) toast(e.message); } }; }
 const clk = h => h == null ? '' : (h >= 24 ? '翌' : '') + Math.floor(h % 24) + ':' + (h % 1 ? '30' : '00');
 const mdw = iso => { const d = new Date(iso + 'T00:00:00'); return (d.getMonth() + 1) + '/' + d.getDate() + '(' + '日月火水木金土'[d.getDay()] + ')'; };
-function relogin(e) { if (/ログインし直/.test(e.message)) { localStorage.removeItem('casa-ses'); S.ses = null; login(e.message); return true; } return false; }
+function relogin(e) { if (/ログインし直/.test(e.message)) { localStorage.removeItem('casa-ses'); S.ses = null; resumeOrLogin(e.message); return true; } return false; }
 async function home() {
+  try { a2hsGuide(false); } catch (e) {}
   $('#who').textContent = S.name + 'さん ▾'; $('#who').hidden = false; $('#logout').hidden = true; $('#bar').hidden = true; setBack(null); app.classList.add('home'); app.innerHTML = '<div class="card hint">読み込み中…</div>';
   try { S.home = await call('portal_home', S.ses); } catch (e) { if (!relogin(e)) app.innerHTML = `<div class="card err">${esc(e.message)}</div>`; return; }
   const h = S.home; if ((h.allStores || []).length > 1) { $('#htitle').innerHTML = `<select id="storeSw" aria-label="店舗を切り替え">${h.stores.map(s => `<option value="${esc(s.url)}" data-as="${esc(s.as || '')}" ${s.current ? 'selected' : ''}>casa${esc(s.name)} シフト</option>`).join('')}</select>`; $('#storeSw').onchange = e => { const o = e.target.selectedOptions[0]; const u = o.value; if (u) { const nm = o.dataset.as || S.name; const go = (window.CASA_STATIC_MAP && window.CASA_STATIC_MAP[o.textContent.replace(/^casa| シフト$/g, '')]) || u; window.open(go + (go.includes('?') ? '&' : '?') + 'n=' + encodeURIComponent(nm), '_top'); } }; } else if (h.store) $('#htitle').textContent = 'casa' + h.store + ' シフト';
@@ -265,7 +275,7 @@ function calendar(storeName, backFn) { /* 自分のスマホのカレンダー�
 }
 async function open(title) {
   setBack(wishList); app.innerHTML = '<div class="card hint">読み込み中…</div>';
-  try { S.data = await call('portal_get', S.ses, title); } catch (e) { if (/ログインし直/.test(e.message)) { localStorage.removeItem('casa-ses'); S.ses = null; return login(e.message); } app.innerHTML = `<div class="card err">${esc(e.message)}</div><button id="back">戻る</button>`; $('#back').onclick = wishList; return; }
+  try { S.data = await call('portal_get', S.ses, title); } catch (e) { if (/ログインし直/.test(e.message)) { localStorage.removeItem('casa-ses'); S.ses = null; return resumeOrLogin(e.message); } app.innerHTML = `<div class="card err">${esc(e.message)}</div><button id="back">戻る</button>`; $('#back').onclick = wishList; return; }
   S.tpl = S.data.template || S.tpl; S.vals = S.data.mine.slice(); S.memo = S.data.memo || ''; render();
 }
 function render() {
@@ -313,11 +323,11 @@ $('#send').onclick = async () => {
   if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'もう一度押して送信'; const el = $('#sum'); el.textContent = `出勤できる ${c.on}日／休み ${c.off}日／未入力 ${c.none}日 で送信します${c.none ? '（未入力の日は希望なし）' : ''}`; el.classList.add('armed'); return; }
   b.disabled = true; b.textContent = '送信中…';
   try { const r = await call('portal_submit', S.ses, S.data.title, S.vals, S.memo || ''); setBack(home); app.innerHTML = `<div class="card done"><b>送信しました</b>${esc(S.data.title.replace('希望', ''))}：出勤できる ${r.on}日・休み ${r.off}日<div class="hint" style="margin-top:10px">直したいときは、もう一度開いて送り直せば上書きされます。</div>${S.memo ? `<div class="hint">メモ: ${esc(S.memo)}</div>` : ''}<button class="link" id="again">内容を見直す</button><button class="link" id="home2">ホームへ</button></div>`; $('#bar').hidden = true; $('#again').onclick = () => open(S.data.title); $('#home2').onclick = home; }
-  catch (e) { toast(e.message, 4000); if (/ログインし直/.test(e.message)) { localStorage.removeItem('casa-ses'); S.ses = null; login(e.message); } }
+  catch (e) { toast(e.message, 4000); if (/ログインし直/.test(e.message)) { localStorage.removeItem('casa-ses'); S.ses = null; resumeOrLogin(e.message); } }
   b.disabled = false; b.textContent = '送信する'; delete b.dataset.armed;
 };
 $('#who').onclick = e => { e.stopPropagation(); let m = document.querySelector('.umenu'); if (m) { m.remove(); return; } m = document.createElement('div'); m.className = 'umenu'; m.innerHTML = ((S.home && (S.home.allStores || []).length > 1) ? '<button id="umStores">店舗の設定</button>' : '') + '<button id="umLogout">ログアウト</button>';
   const us = m.querySelector('#umStores'); if (us) us.onclick = () => { m.remove(); storesScreen(); }; document.body.appendChild(m); m.querySelector('#umLogout').onclick = () => { m.remove(); $('#logout').onclick(); }; setTimeout(() => document.addEventListener('click', function c(ev) { if (!m.contains(ev.target)) { m.remove(); document.removeEventListener('click', c); } }), 0); };
-$('#logout').onclick = () => { localStorage.removeItem('casa-ses'); S.ses = null; login(); };
+$('#logout').onclick = () => { const k = devKey(); localStorage.removeItem('casa-ses'); S.ses = null; devClear(); if (k) call('portal_logout', k).catch(() => {}); login(); };
 start();
 </script></body></html>
