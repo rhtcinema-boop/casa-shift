@@ -102,6 +102,22 @@ main.home{min-height:calc(100dvh - 56px);box-sizing:border-box;padding-bottom:ca
 /* ホーム配置（オーナー指示 2026-10-10 13:17）: 上半分が「シフトを見る」、下に「希望を出す」「全店舗のシフト」を縦に */
 .home .big button#goView{min-height:min(42dvh,360px)!important;align-content:center}.home .big button#goView .tt{font-size:26px!important}.home .big button#goView .ic{width:64px!important;height:64px!important}.home .big button#goView .ic svg{width:34px!important;height:34px!important}
 .allbtn{grid-template-columns:1fr 18px!important;grid-template-rows:auto auto;padding:18px 16px!important}.allbtn .tt{grid-column:1;grid-row:1;writing-mode:horizontal-tb}.allbtn small{grid-column:1;grid-row:2}.allbtn .chev{grid-column:2;grid-row:1/3;align-self:center}
+/* 2026-11-05 使いやすさの調整（ChatGPT 採点の指摘より。見た目の骨組みは変えない） */
+.hint{font-size:14px!important;color:#5f6368}
+.grow{grid-template-columns:84px 1fr!important}.gname{font-size:13px}
+.drow .dhead small{color:#3c4043;font-weight:600}.drow .mn.off{color:#80868b;font-weight:500}
+.plist button .chev{color:#98a2b3;font-size:20px;margin-left:6px}.plist button .rt{display:flex;align-items:center;gap:2px}
+.newlink{align-self:flex-start;font-size:14px;padding:2px 0!important}
+.a2hs{margin:8px 12px 0;border-radius:12px;background:#FFF4E5;color:#7A4100;font:600 14px/1.5 -apple-system,sans-serif;position:relative}.a2hs summary{list-style:none;padding:12px 40px 12px 14px;cursor:pointer}.a2hs summary::-webkit-details-marker{display:none}.a2hs summary .q{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;background:#F5C98B;color:#7A4100;font-size:12px;margin-left:6px}.a2hs .body{padding:0 14px 12px;font-weight:500;font-size:13px}.a2hs .x{position:absolute;top:6px;right:6px;border:0;background:none;font-size:18px;color:#7A4100;padding:6px 10px}
+/* 人数の帯がカードからはみ出さない */.gheat .gtrack{overflow:hidden}.gheat i{min-width:0;overflow:hidden}.gtrack{min-width:0}.grow{min-width:0}
+.gbar{overflow:visible!important}.gbar .g1{border-radius:4px 0 0 4px}.gbar .g2{border-radius:0 4px 4px 0}.gbar em.out-r{left:calc(100% + 6px)!important}.gbar em.out-l{left:auto!important;right:calc(100% + 6px)}.gbar em{top:0;line-height:20px}
+.gheat i.chg{box-shadow:inset 1px 0 0 rgba(255,255,255,.6)}
+.qq{display:inline-grid;place-items:center;width:16px;height:16px;padding:0!important;margin-left:3px;border-radius:50%!important;background:#e4e7ec!important;color:#475467!important;font-size:10px!important;font-weight:700;vertical-align:1px}
+.gheat{min-height:22px!important}.gheat .gtrack{height:20px!important}.gheat .gtrack{gap:0!important}.gheat i{font-size:11px!important;line-height:20px!important;color:#fff;font-weight:700;overflow:visible!important;border-radius:0!important}.gheat i:first-child{border-radius:3px 0 0 3px!important}.gheat i:last-child{border-radius:0 3px 3px 0!important}
+.rl{color:#475467!important;background:#f2f4f7!important;font-size:10px!important}.rc{font-size:10px!important}
+.plist button .act{font-size:14px;font-weight:600;color:#0071e3;margin-left:10px}
+.calhero b{font-size:15px;line-height:1.5}
+details.stepd summary{font-size:14px;font-weight:600;color:#0071e3;cursor:pointer;padding:4px 0}details.stepd[open] summary{margin-bottom:4px}
 </style></head>
 <body>
 <header><button id="back" hidden aria-label="前の画面に戻る">‹ 戻る</button><b id="htitle">casa シフト</b><span class="sp"></span><button id="who" hidden></button><button class="link" id="logout" hidden>ログアウト</button></header>
@@ -115,7 +131,7 @@ const $ = s => document.querySelector(s); const app = $('#app'); let S = { init:
 const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const toast = (m, ms) => { const t = document.createElement('div'); t.className = 'toast'; t.textContent = m; document.body.appendChild(t); setTimeout(() => t.remove(), ms || 2600); };
 const call = (fn, ...a) => new Promise((res, rej) => google.script.run.withSuccessHandler(res).withFailureHandler(e => rej(e && e.message ? e : new Error(String(e))))[fn](...a));
-const setBack = fn => { const b = $('#back'); b.hidden = !fn; b.onclick = fn || null; if (fn) app.classList.remove('home'); }; /* 上の「‹ 戻る」。ホームとログインでは出さない */
+const setBack = fn => { const b = $('#back'); b.hidden = !fn; b.onclick = fn || null; if (fn) { const a2 = document.getElementById('a2hs'); if (a2) a2.remove(); } /* ホーム画面の案内はホームだけ */ if (fn) app.classList.remove('home'); }; /* 上の「‹ 戻る」。ホームとログインでは出さない */
 const store = { get: k => { try { return localStorage.getItem('casa-' + k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem('casa-' + k, v); } catch (e) {} } };
 
 const NEW_URL = { '上野': 'https://rhtcinema-boop.github.io/casa-shift/ueno/?openExternalBrowser=1', '札幌': 'https://rhtcinema-boop.github.io/casa-shift/sapporo/?openExternalBrowser=1', '渋谷': 'https://rhtcinema-boop.github.io/casa-shift/shibuya/?openExternalBrowser=1' }; /* ?openExternalBrowser=1 … LINEの中で押してもSafari（外のブラウザ）で開く（2026-10-28） */
@@ -130,7 +146,8 @@ function a2hsGuide(onlyRedirect) { if (!window.CASA_STATIC) return; const ua = n
   if (inApp) b.innerHTML = '📱 <b>アプリにするには、Safariで開いてください</b><br>' + (isLine ? '右下の ' + step('︙') + ' か ' + shareIc + ' →「' + step('Safariで開く') + '」' : '右上か右下のメニュー →「' + step(ios ? 'Safariで開く' : 'ブラウザで開く') + '」') + '<br><span style="font-size:12px;opacity:.8">このアプリの中のままだと「ホーム画面に追加」が出ません</span>';
   else if (ios) b.innerHTML = '📱 <b>アプリにする方法</b>（1回だけ）<br>下の ' + shareIc + ' 共有ボタン →「' + step('ホーム画面に追加') + '」→ 右上の「' + step('追加') + '」<br><span style="font-size:12px;opacity:.8">いまログインした状態で追加すると、次からログインなしで開けます。メニューに無い時は下にスクロール</span>';
   else b.innerHTML = '📱 <b>アプリにする方法</b>（1回だけ）<br>右上の ' + step('︙') + ' →「' + step('ホーム画面に追加') + '」';
-  if (!inApp) { const x = document.createElement('button'); x.textContent = '×'; x.setAttribute('aria-label', '閉じる'); x.style.cssText = 'position:absolute;top:4px;right:6px;border:0;background:none;font-size:18px;color:#7A4100;cursor:pointer;padding:4px 8px'; x.onclick = () => { try { localStorage.setItem('casa-a2hs-off', '1'); } catch (e) {} b.remove(); }; b.appendChild(x); }
+  if (!inApp) { const steps = b.innerHTML.replace(/^📱 <b>アプリにする方法<\/b>（1回だけ）<br>/, ''); b.innerHTML = ''; const dt = document.createElement('details'); dt.className = 'a2hs'; dt.innerHTML = '<summary>📱 アプリにする方法<span class="q" aria-label="やり方">?</span></summary><div class="body">' + steps + '</div>'; b.style.cssText = 'position:relative'; b.appendChild(dt); }
+  if (!inApp) { const x = document.createElement('button'); x.textContent = '×'; x.setAttribute('aria-label', '閉じる'); x.style.cssText = 'position:absolute;top:12px;right:16px;border:0;background:none;font-size:18px;color:#7A4100;cursor:pointer;padding:4px 8px'; x.onclick = () => { try { localStorage.setItem('casa-a2hs-off', '1'); } catch (e) {} b.remove(); }; b.appendChild(x); }
   app.parentNode.insertBefore(b, app); } /* 2026-10-27: script.google.com はiPhoneで開けないことがあるので、ホーム画面用の新しいURLへ案内 */
 /* 端末キー（?k= と localStorage）。ホーム画面アプリは Safari と保存領域が別なので、URLにも持たせる（ログイン後に追加すればアイコンのURLに入る） */
 function devKey() { try { return new URLSearchParams(location.search).get('k') || localStorage.getItem('casa-dev') || ''; } catch (e) { return new URLSearchParams(location.search).get('k') || ''; } }
@@ -152,13 +169,13 @@ function login(msg) {
   const last = store.get('name') || '';
   app.innerHTML = `<h1>ログイン</h1><div class="card">
     <label>名前<select id="nm"><option value="">選んでください</option>${S.init.names.map(n => `<option ${n === last ? 'selected' : ''}>${esc(n)}</option>`).join('')}<option value="__new">一覧に名前がない（新しく登録）</option></select></label>
-    <label id="nwrap" hidden>あなたの名前（シフト表と同じ書き方で）<input id="nnew" maxlength="20" autocomplete="name" placeholder="例: さくら"></label>
+    <button class="link newlink" id="toNew" type="button">名前がない人はこちら（新規登録）</button><label id="nwrap" hidden>あなたの名前（シフト表と同じ書き方で）<input id="nnew" maxlength="20" autocomplete="name" placeholder="例: さくら"></label>
     <div id="stwrap" hidden><div class="stt">働いている・働くかもしれない店舗</div>${storeBoxes([], true)}<div class="hint">働いている店舗にチェックして、その店の一覧から自分を選んでください。一覧にいなければ「追加する」で、その店のシフト表（直近の期間）に名前が入ります。</div></div>
-    <label>暗証番号（数字4けた）<input id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="current-password"></label>
+    <label>暗証番号（数字4けた）<input id="pin" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="current-password"><span class="hint" style="margin-top:2px;line-height:1.6">初回は好きな4けたを設定できます<br>忘れた場合は店長へ</span></label>
     ${msg ? `<div class="err">${esc(msg)}</div>` : ''}
-    <button class="primary" id="go">ログイン</button>
-    <div class="hint">はじめての人は、ここで決めた4けたの番号があなたの暗証番号になります。忘れたら店長に言ってください。一覧に名前がない人は「新しく登録」から登録できます。</div></div>`;
-  $('#nm').onchange = () => { const nw = $('#nm').value === '__new'; $('#nwrap').hidden = !nw; $('#stwrap').hidden = !nw || (S.init.stores || []).length < 2; $('#go').textContent = nw ? '登録してログイン' : 'ログイン'; if (nw) $('#nnew').focus(); };
+    <button class="primary" id="go">ログイン</button></div>`;
+  $('#toNew').onclick = () => { $('#nm').value = '__new'; $('#nm').onchange(); };
+  $('#nm').onchange = () => { const nw = $('#nm').value === '__new'; $('#toNew').hidden = nw; $('#nwrap').hidden = !nw; $('#stwrap').hidden = !nw || (S.init.stores || []).length < 2; $('#go').textContent = nw ? '登録してログイン' : 'ログイン'; if (nw) $('#nnew').focus(); };
   wireStoreBoxes(() => $('#nnew').value.trim());
   if (PRE.n) { const opt = [...$('#nm').options].find(o => o.value === PRE.n); if (opt) $('#nm').value = PRE.n; else { $('#nm').value = '__new'; $('#nnew').value = PRE.n; } $('#nm').onchange(); }
   $('#go').onclick = async () => { const isNew = $('#nm').value === '__new'; const nm = isNew ? $('#nnew').value.trim() : $('#nm').value, pin = $('#pin').value; if (isNew && !nm) return login('名前を入れてください'); { const miss = storeBoxesMissingName(); if (miss.length) return toast('casa' + miss.join('・') + ' で使う名前を入れてください', 3500); } $('#go').disabled = true;
@@ -189,9 +206,9 @@ async function home() {
   const need = h.wishes.filter(w => w.status === 'open' && !w.submitted);
   const icCal = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M4 10h16M9 3v4M15 3v4"/></svg>', icPen = '<svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/></svg>';
   app.innerHTML = `${h.next ? `<button class="next" id="goNext"><span>次の勤務：${esc(mdw(h.next.iso))} ${clk(h.next.s)}〜${clk(h.next.e)}<small>${esc(h.next.label)}の確定シフト</small></span><span class="arr">›</span></button>` : ''}${h.onSheet === false ? '<div class="card hint">シフト表にまだあなたの名前がありません。<button class="link" id="addMe">シフト表に自分の名前を追加する</button></div>' : ''}${need.map(w => `<button class="warn" data-t="${esc(w.title)}"><span>⚠ ${esc(w.label)}の希望がまだ出ていません<span class="hint">締切 ${esc(mdw(w.close))}・押して提出</span></span><span class="arr">›</span></button>`).join('')}
-  <div class="big"><button class="primary" id="goView"><span class="ic" style="background:#007AFF">${icCal}</span><span class="tt">シフトを見る</span><span class="chev">›</span><small>${h.views.length ? '公開中: ' + esc(h.views.slice(-3).map(v => v.label).join('・')) : 'まだ公開されたシフトはありません'}</small></button>
-  <button id="goWish"><span class="ic" style="background:#34C759">${icPen}</span><span class="tt">希望を出す</span><span class="chev">›</span><small>${h.wishes.filter(w => w.status === 'open').length ? '受付中: ' + esc(h.wishes.filter(w => w.status === 'open').map(w => w.label + (w.submitted ? '（提出済み）' : '')).join('・')) : 'いま受付中の期間はありません'}</small></button></div>`;
-  if ((h.stores || []).length > 1) { const b = document.createElement('button'); b.className = 'allbtn'; b.id = 'goAll'; b.innerHTML = '<span class="tt">全店舗のシフト</span><small>' + esc(h.stores.map(s => s.name).join('・')) + ' をまとめて見る・店舗ごとにカレンダー登録</small><span class="chev">›</span>'; app.appendChild(b); b.onclick = allScreen; }
+  <div class="big"><button class="primary" id="goView"><span class="ic" style="background:#007AFF">${icCal}</span><span class="tt">シフトを見る</span><span class="chev">›</span><small>${h.views.length ? '公開中: ' + esc(h.views.slice(-3).map(v => v.label).join('・')) : 'まだ公開されたシフトはありません（公開後にカレンダー登録できます）'}</small></button>
+  <button id="goWish"><span class="ic" style="background:#34C759">${icPen}</span><span class="tt">希望を出す</span><span class="chev">›</span><small>${h.wishes.filter(w => w.status === 'open').length ? (() => { const op = h.wishes.filter(w => w.status === 'open'); const lb = ws => ws.map(w => w.label).join('・').replace(/(\d+月)前半・\1後半/g, '$1前半・後半'); const ng = op.filter(w => !w.submitted), ok = op.filter(w => w.submitted); return esc((ng.length ? '未提出: ' + lb(ng) : '') + (ng.length && ok.length ? '　' : '') + (ok.length ? lb(ok) + '：提出済み' : '')); })() : 'いま受付中の期間はありません'}</small></button></div>`;
+  if ((h.stores || []).length > 1) { const b = document.createElement('button'); b.className = 'allbtn'; b.id = 'goAll'; b.innerHTML = '<span class="tt">全店舗のシフト</span><small>全店舗の勤務確認・カレンダー登録</small><span class="chev">›</span>'; app.appendChild(b); b.onclick = allScreen; }
   else if (h.multi) { const d = document.createElement('div'); d.className = 'hint center'; d.innerHTML = '他の店舗でも働いている人は、右上の名前 →「店舗の設定」から登録できます'; app.appendChild(d); }
   const am = $('#addMe'); if (am) am.onclick = async () => { am.disabled = true; try { const r = await call('portal_addName', S.ses, '', S.name); toast(r.existed ? 'もうシフト表に名前があります' : 'シフト表（' + r.tab + '）に名前を追加しました。10分ほどで店長アプリにも入ります', 5000); home(); } catch (e) { am.disabled = false; if (!relogin(e)) toast(e.message, 4000); } };
   app.querySelectorAll('.warn[data-t]').forEach(b => b.onclick = () => open(b.dataset.t)); const gn = $('#goNext'); if (gn) gn.onclick = () => { const vi = h.views.findIndex(v => v.start <= h.next.iso && h.next.iso <= v.end); S.focusDay = h.next.iso; view(vi >= 0 ? vi : undefined); };
@@ -199,12 +216,12 @@ async function home() {
 }
 function wishList() {
   $('#bar').hidden = true; setBack(home); const ws = S.home.wishes; const st = w => w.status === 'before' ? `<span class="st">${esc(mdw(w.open))}から</span>` : w.status === 'closed' ? '<span class="st">締切済み</span>' : w.submitted ? '<span class="st open">提出済み</span>' : `<span class="st need">未提出・締切${esc(mdw(w.close))}</span>`;
-  app.innerHTML = `<h1>希望を出す</h1><div class="card plist">${ws.length ? ws.map(w => `<button data-t="${esc(w.title)}" ${w.status === 'open' ? '' : 'disabled'}>${esc(w.label)}${st(w)}</button>`).join('') : '<div class="hint">いま受付中の期間はありません。</div>'}</div><button class="link" id="home">← ホームへ</button>`;
+  app.innerHTML = `<h1>希望を出す</h1><div class="card plist">${ws.length ? ws.map(w => `<button data-t="${esc(w.title)}" ${w.status === 'open' ? '' : 'disabled'}>${esc(w.label)}<span class="rt">${st(w)}${w.status === 'open' ? `<span class="act">${w.submitted ? '変更' : '入力'}</span><span class="chev">›</span>` : ''}</span></button>`).join('') : '<div class="hint">いま受付中の期間はありません。</div>'}</div><button class="link" id="home">← ホームへ</button>`;
   app.querySelectorAll('[data-t]').forEach(b => b.onclick = () => open(b.dataset.t)); $('#home').onclick = home;
 }
 /* 日付の行: 押すとその日の帯を開く（開いた日だけ描くので軽い） */
 function dayRow(d, x, i) { const n = d.rows.filter(r => r.cells[i] && r.cells[i][0] != null && r.cells[i][1] != null).length; const me = d.rows.find(r => r.me); const mc = me && me.cells[i]; const mine = mc && mc[0] != null ? `<b class="mn">${clk(mc[0])}〜${clk(mc[1])}</b>` : (me ? '<b class="mn off">休み</b>' : '');
-  return `<div class="vday drow ${x.off ? 'we' : ''} ${x.iso === d.today ? 'today' : ''}" data-iso="${x.iso}" data-i="${i}"><button class="dhead" aria-expanded="false"><span class="dd">${esc(x.md)}(${esc(x.wd)})${x.iso === d.today ? ' 今日' : ''}</span>${mine}<small>${n}人</small><span class="chev">›</span></button><div class="dbody" hidden></div></div>`; }
+  return `<div class="vday drow ${x.off ? 'we' : ''} ${x.iso === d.today ? 'today' : ''}" data-iso="${x.iso}" data-i="${i}"><button class="dhead" aria-expanded="false"><span class="dd">${esc(x.md)}(${esc(x.wd)})${x.iso === d.today ? ' 今日' : ''}</span>${mine}<small>出勤${n}人</small><span class="chev">›</span></button><div class="dbody" hidden></div></div>`; }
 function openDay(row, d) { const body = row.querySelector('.dbody'); const btn = row.querySelector('.dhead'); const open = body.hidden; if (open && !body.dataset.done) { body.innerHTML = dayGantt(d, d.days[+row.dataset.i], +row.dataset.i); body.dataset.done = '1'; } body.hidden = !open; btn.setAttribute('aria-expanded', String(open)); row.classList.toggle('open', open); }
 /* 1日ぶんの帯（店長アプリの写真と同じ見た目）: 時刻 → 人数 → 名前ごとの帯 */
 function dayGantt(d, x, i) {
@@ -214,11 +231,11 @@ function dayGantt(d, x, i) {
   let t0 = Math.min(17, ...rs.map(r => Math.floor(r.c[0]))), t1 = Math.max(31, ...rs.map(r => Math.ceil(r.c[1]))); t0 = Math.max(5, t0); t1 = Math.min(36, t1);
   const span = t1 - t0; const pos = t => ((t - t0) / span * 100).toFixed(2) + '%';
   const hc = []; for (let t = t0; t < t1; t += .5) hc.push(rs.filter(r => r.c[0] <= t && t < r.c[1]).length);
-  let axis = ''; for (let t = t0; t <= t1; t++) axis += `<i style="left:${pos(t)}">${t}</i>`;
-  const heat = hc.map(n => `<i class="h${Math.min(5, n)}">${n || ''}</i>`).join('');
+  let axis = ''; for (let t = t0; t <= t1; t++) if (t % 2 === 0) axis += `<i style="left:${pos(t)}">${t}</i>`;
+  const heat = hc.map((n, k) => `<i class="h${Math.min(5, n)}${k && n !== hc[k - 1] ? ' chg' : ''}">${n && n !== hc[k - 1] ? n : ''}</i>`).join(''); /* 人数は変わる所だけ数字（密集させない） */
   const rows = rs.map(r => { const [s, e, f] = r.c; const ld = /L/.test(f || ''), cl = /C/.test(f || ''); const xm = Math.max(s, e - .5); const w1 = ((xm - s) / (e - s) * 100).toFixed(2);
-    return `<div class="grow ${r.me ? 'me' : ''}"><div class="gname">${esc(r.name)}</div><div class="gtrack"><span class="gbar" style="left:${pos(s)};width:calc(${pos(e)} - ${pos(s)})"><span class="g1 ${ld ? 'ld' : ''}" style="width:${w1}%"></span><span class="g2 ${cl ? 'cl' : ''}"></span><em>${clk(s)}〜${clk(e)}</em></span></div></div>`; }).join('');
-  return `<div class="${cls}">${head}<div class="grow gaxis"><div class="gname"></div><div class="gtrack">${axis}</div></div><div class="grow gheat"><div class="gname">人数</div><div class="gtrack" style="grid-template-columns:repeat(${hc.length},1fr)">${heat}</div></div>${rows}</div>`;
+    return `<div class="grow ${r.me ? 'me' : ''}"><div class="gname">${esc(r.name)}</div><div class="gtrack"><span class="gbar" style="left:${pos(s)};width:calc(${pos(e)} - ${pos(s)})"><span class="g1 ${ld ? 'ld' : ''}" style="width:${w1}%"></span><span class="g2 ${cl ? 'cl' : ''}"></span><em class="${(e - s) / span < .34 ? ((t1 - e) / span >= .3 ? 'out-r' : 'out-l') : ''}">${clk(s)}〜${clk(e)}</em></span></div></div>`; }).join('');
+  return `<div class="${cls}">${head}<div class="grow gaxis"><div class="gname"></div><div class="gtrack">${axis}</div></div><div class="grow gheat"><div class="gname">人数<button class="qq" type="button" aria-label="人数の見方" onclick="event.stopPropagation();toast('人数が変わる時間だけ数字を出しています',3000)">?</button></div><div class="gtrack" style="grid-template-columns:repeat(${hc.length},1fr)">${heat}</div></div>${rows}</div>`;
 }
 async function view(idx) {
   $('#bar').hidden = true; setBack(home); const vs = S.home.views; if (!vs.length) { app.innerHTML = '<h1>シフトを見る</h1><div class="card hint">まだ公開されたシフトはありません。</div><button class="link" id="home">← ホームへ</button>'; $('#home').onclick = home; return; }
@@ -230,7 +247,7 @@ async function view(idx) {
   S.viewIdx = idx;
   const me = d.rows.find(r => r.me); const mine = me ? d.days.map((x, i) => me.cells[i] ? `<span class="${x.off ? 'we' : ''}">${esc(x.md)}(${esc(x.wd)})</span><b>${clk(me.cells[i][0])}〜${clk(me.cells[i][1])}</b>` : '').join('') : '';
   app.innerHTML = `<div class="seg">${tabs.map(([i, l]) => `<button data-i="${i}" class="${i === idx ? 'on' : ''}">${l}<br><small>${esc(vs[i].label)}</small></button>`).join('')}</div>
-  <div class="card"><b>${esc(S.name)}さんのシフト（${esc(d.label)}）</b>${mine ? `<div class="mine">${mine}</div>` : '<div class="hint">この期間のシフトはありません。</div>'}<button class="primary" id="cal">スマホのカレンダーに入れる</button></div>
+  <div class="card"><b>${esc(S.name)}さんのシフト（${esc(d.label)}）</b>${mine ? `<div class="mine">${mine}</div>` : '<div class="hint">この期間のシフトはありません。</div>'}<button class="primary" id="cal">カレンダーに登録</button></div>
   <div class="card"><b>みんなのシフト</b><div class="legend"><i class="lg g"></i>勤務<i class="lg b"></i>時間帯責任者<i class="lg r"></i>締め（最後の30分）</div><div class="hint">日付を押すとその日の帯が出ます</div>${d.days.map((x, i) => dayRow(d, x, i)).join('')}</div>
   <button class="link" id="home">← ホームへ</button>`;
   app.querySelectorAll('.seg [data-i]').forEach(b => b.onclick = () => view(+b.dataset.i)); $('#home').onclick = home; $('#cal').onclick = () => calendar();
@@ -243,16 +260,16 @@ async function allScreen() {
   const today = r.today; const up = []; (r.stores || []).forEach(s => (s.shifts || []).forEach(x => { if (x.iso >= today) up.push(Object.assign({ store: s.store }, x)); })); up.sort((a, b) => a.iso.localeCompare(b.iso) || a.s - b.s);
   const role = x => (/L/.test(x.role || '') ? '<i class="rl">責任者</i>' : '') + (/C/.test(x.role || '') ? '<i class="rc">締め</i>' : '');
   app.innerHTML = `<h1>全店舗のシフト</h1>
-  <div class="card"><b>これからの勤務（全店舗）</b>${up.length ? `<div class="mine all">${up.slice(0, 60).map(x => `<span class="${/[土日]/.test(mdw(x.iso)) ? 'we' : ''}">${esc(mdw(x.iso))}</span><b><em class="stb">${esc(x.store)}</em>${clk(x.s)}〜${clk(x.e)}${role(x)}</b>`).join('')}</div>` : '<div class="hint">公開されているシフトに、これからの勤務はありません。</div>'}</div>
-  ${(r.stores || []).map(s => `<div class="card"><b>casa${esc(s.store)}<small class="hint" style="margin-left:6px;font-weight:400">${esc(s.name)}さん</small></b>${s.error ? `<div class="err">${esc(s.error)}</div>` : `<div class="hint">${s.published && s.published.length ? '公開中: ' + esc(s.published.slice(-3).join('・')) : 'まだ公開されたシフトはありません'}${s.onSheet === false ? '<br>この店のシフト表に名前がありません（店舗の設定で「追加する」を選べます）' : ''}</div>`}<div class="row"><button class="primary" data-cal="${esc(s.store)}" ${s.error ? 'disabled' : ''}>スマホのカレンダーに入れる（${esc(s.store)}）</button>${!s.current && s.url ? `<a href="${esc(s.url)}${s.url.includes('?') ? '&' : '?'}n=${encodeURIComponent(s.name || '')}" target="_top"><button>この店のページを開く</button></a>` : ''}</div></div>`).join('')}
+  <div class="card"><b>これからの勤務</b>${up.length ? `<div class="mine all">${up.slice(0, 60).map(x => `<span class="${/[土日]/.test(mdw(x.iso)) ? 'we' : ''}">${esc(mdw(x.iso))}</span><b><em class="stb">${esc(x.store)}</em>${clk(x.s)}〜${clk(x.e)}${role(x)}</b>`).join('')}</div>` : '<div class="hint">公開されているシフトに、これからの勤務はありません。</div>'}</div>
+  ${(r.stores || []).map(s => `<div class="card"><b>casa${esc(s.store)}<small class="hint" style="margin-left:6px;font-weight:400">${esc(s.name)}さん</small></b>${s.error ? `<div class="err">${esc(s.error)}</div>` : `<div class="hint">${s.published && s.published.length ? '公開中: ' + esc(s.published.slice(-3).join('・')) : 'まだ公開されたシフトはありません'}${s.onSheet === false ? '<br>この店のシフト表に名前がありません（店舗の設定で「追加する」を選べます）' : ''}</div>`}<div class="row">${s.published && s.published.length && !s.error ? `<button class="primary" data-cal="${esc(s.store)}">カレンダーに登録（${esc(s.store)}）</button>` : ''}${!s.current && s.url ? `<a href="${esc(s.url)}${s.url.includes('?') ? '&' : '?'}n=${encodeURIComponent(s.name || '')}" target="_top"><button>この店のページを開く</button></a>` : ''}</div></div>`).join('')}
   <button class="link" id="home">← ホームへ</button>`;
   $('#home').onclick = home; app.querySelectorAll('[data-cal]').forEach(b => b.onclick = () => calendar(b.dataset.cal, allScreen));
 }
 function calendar(storeName, backFn) { /* 自分のスマホのカレンダーにシフトを入れる（2026-10-24 わかりやすく作り直し: 端末に合わせたボタン1つで登録、細かい設定は「ほかのやり方」に） */
   const back = backFn || (() => view()); setBack(back); const h = S.home; const own = !storeName || storeName === h.store; const def = own && h.calTitle ? h.calTitle : ('casa' + (storeName || h.store || '') + ' 出勤');
   const ua = navigator.userAgent; const isIOS = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document); const isAndroid = /Android/.test(ua);
-  app.innerHTML = `<h1>スマホのカレンダーに入れる</h1>
-    <div class="card calhero"><div class="calbig">📅</div><b>1回登録すれば、あとは自動</b><div class="hint">${own ? '' : 'casa' + esc(storeName) + 'の'}公開された確定シフトのうち、<b>あなたの勤務だけ</b>がカレンダーに入ります。新しいシフトが公開されると自動で増えます。</div></div>
+  app.innerHTML = `<h1>カレンダーに登録</h1>
+    <div class="card calhero"><b>📅 一度登録すれば、あとは自動</b><div class="hint" style="margin-top:4px">${own ? '' : 'casa' + esc(storeName) + 'の'}公開済みの自分の勤務が自動で追加されます</div></div>
     <div id="cmain"><div class="card hint">準備中…</div></div>
     <details class="card calmore"><summary>ほかのやり方・名前を変える</summary>
       <label>予定の名前<input id="ctitle" value="${esc(def)}" maxlength="40"></label><button id="cname">この名前にする</button>
@@ -260,11 +277,11 @@ function calendar(storeName, backFn) { /* 自分のスマホのカレンダー�
       <div class="copy" id="curl">—</div><div class="row"><button id="ccopy">URLをコピー</button><button id="cshare">ほかのアプリで開く</button></div>
       <div class="row"><a id="cfile" href="#"><button style="width:100%">今のシフトを1回だけ入れる（ファイル）</button></a></div><div class="hint">「1回だけ」は自動で更新されません。2回押すと同じ予定が2つ入ります。</div>
     </details>
-    <button class="link" id="back">${own ? '← シフトに戻る' : '← 全店舗のシフトに戻る'}</button>`;
-  $('#back').onclick = back; let r = null;
+    <button class="link" id="cback">${own ? '← シフトに戻る' : '← 全店舗のシフトに戻る'}</button>`;
+  $('#cback').onclick = back; let r = null;
   const draw = () => { const webcal = r.url.replace(/^https:/, 'webcal:'); const gcal = 'https://calendar.google.com/calendar/render?cid=' + encodeURIComponent(webcal);
-    const ios = `<a class="calbtn" href="${esc(webcal)}"><button class="primary">iPhoneのカレンダーに入れる</button></a><ol class="steps"><li>上のボタンを押す</li><li>「照会しますか？」と出たら <b>照会</b></li><li>右上の <b>追加</b> を押して終わり</li></ol>`;
-    const goo = `<a class="calbtn" href="${esc(gcal)}" target="_blank" rel="noopener"><button class="${isIOS ? '' : 'primary'}">Googleカレンダーに入れる</button></a><ol class="steps"><li>上のボタンを押す（Googleカレンダーが開きます）</li><li>「カレンダーを追加しますか？」で <b>追加</b></li><li>スマホのGoogleカレンダーにも数分〜数時間で出ます</li></ol>`;
+    const ios = `<a class="calbtn" href="${esc(webcal)}"><button class="primary">iPhoneのカレンダーに入れる</button></a><details class="stepd"><summary>手順を見る</summary><ol class="steps"><li>上のボタンを押す</li><li>「照会しますか？」と出たら <b>照会</b></li><li>右上の <b>追加</b> を押して終わり</li></ol></details>`;
+    const goo = `<a class="calbtn" href="${esc(gcal)}" target="_blank" rel="noopener"><button class="${isIOS ? '' : 'primary'}">Googleカレンダーに入れる</button></a><details class="stepd"><summary>手順を見る</summary><ol class="steps"><li>上のボタンを押す（Googleカレンダーが開きます）</li><li>「カレンダーを追加しますか？」で <b>追加</b></li><li>スマホのGoogleカレンダーにも数分〜数時間で出ます</li></ol></details>`;
     $('#cmain').innerHTML = `<div class="card"><b>${isIOS ? 'iPhone の人はこちら' : isAndroid ? 'Android の人はこちら' : 'カレンダーを選んでください'}</b>${isIOS ? ios : goo}</div><div class="card"><b>${isIOS ? 'Googleカレンダーを使っている人' : 'iPhone のカレンダーを使っている人'}</b>${isIOS ? goo : ios}</div>`;
     $('#curl').textContent = r.url; $('#cfile').href = r.dl; };
   const load = async () => { try { r = await call('portal_calFor', S.ses, own ? '' : storeName, $('#ctitle').value); if (own) S.home.calTitle = r.title; draw(); } catch (e) { if (!relogin(e)) $('#cmain').innerHTML = `<div class="card err">${esc(e.message)}</div>`; } };
