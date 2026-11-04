@@ -112,6 +112,14 @@ main.home{min-height:calc(100dvh - 56px);box-sizing:border-box;padding-bottom:ca
 /* 人数の帯がカードからはみ出さない */.gheat .gtrack{overflow:hidden}.gheat i{min-width:0;overflow:hidden}.gtrack{min-width:0}.grow{min-width:0}
 .gbar{overflow:visible!important}.gbar .g1{border-radius:4px 0 0 4px}.gbar .g2{border-radius:0 4px 4px 0}.gbar em.out-r{left:calc(100% + 6px)!important}.gbar em.out-l{left:auto!important;right:calc(100% + 6px)}.gbar em{top:0;line-height:20px}
 .gheat i.chg{box-shadow:inset 1px 0 0 rgba(255,255,255,.6)}
+.chip{background:#fff;border:1px solid #d0d5dd;color:#1d2939}.chip.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.day.isoff .pick{display:none}
+button:disabled{opacity:1!important;color:#777!important;background:#eef0f3!important}
+.bar .sum html{scroll-padding-top:72px;scroll-padding-bottom:110px}/* 上の固定ヘッダー・下の送信バーに隠れない */
+.qq{position:relative}.qq::before{content:'';position:absolute;inset:-14px}
+.day{padding:4px 0!important;gap:5px!important}.day input{padding:8px 4px!important}.day .offb{padding:8px 0!important}.day .pick{padding:6px 10px!important;font-size:14px;min-height:36px}
+#bulk,#fillOff{white-space:nowrap}
+.qq{vertical-align:0}
 .qq{display:inline-grid;place-items:center;width:16px;height:16px;padding:0!important;margin-left:3px;border-radius:50%!important;background:#e4e7ec!important;color:#475467!important;font-size:10px!important;font-weight:700;vertical-align:1px}
 .gheat{min-height:22px!important}.gheat .gtrack{height:20px!important}.gheat .gtrack{gap:0!important}.gheat i{font-size:11px!important;line-height:20px!important;color:#fff;font-weight:700;overflow:visible!important;border-radius:0!important}.gheat i:first-child{border-radius:3px 0 0 3px!important}.gheat i:last-child{border-radius:0 3px 3px 0!important}
 .rl{color:#475467!important;background:#f2f4f7!important;font-size:10px!important}.rc{font-size:10px!important}
@@ -295,18 +303,20 @@ async function open(title) {
   try { S.data = await call('portal_get', S.ses, title); } catch (e) { if (/ログインし直/.test(e.message)) { localStorage.removeItem('casa-ses'); S.ses = null; return resumeOrLogin(e.message); } app.innerHTML = `<div class="card err">${esc(e.message)}</div><button id="back">戻る</button>`; $('#back').onclick = wishList; return; }
   S.tpl = S.data.template || S.tpl; S.vals = S.data.mine.slice(); S.memo = S.data.memo || ''; render();
 }
+const fmtP = p => { const [a, b] = String(p).split('-').map(Number); return Number.isFinite(a) && Number.isFinite(b) ? clk(a) + '〜' + clk(b) : p; }; /* 「16-23」→「16:00〜23:00」 */
+const qq = (msg, label) => `<button class="qq" type="button" aria-label="${label || '説明'}" onclick="event.stopPropagation();toast(${esc(JSON.stringify(msg))},4000)">?</button>`;
 function render() {
-  const d = S.data, pre = S.init.presets; const opts = '<option value="">よく使う時間から選ぶ…</option>' + pre.map(p => `<option>${p}</option>`).join('') + '<option value="休">休み</option><option value="__clear">消す</option>';
+  const d = S.data, pre = S.init.presets; const opts = '<option value="">よく使う時間から選ぶ…</option>' + pre.map(p => `<option value="${p}">${fmtP(p)}</option>`).join('') + '<option value="休">休み</option><option value="__clear">消す</option>';
   app.innerHTML = `<h1>${esc(d.title.replace('希望', ''))} の希望</h1>${d.close ? `<div class="hint">締切 ${esc(mdw(d.close))}</div>` : ''}
-  <div class="card"><b>かんたん入力</b>
+  <div class="card"><b>かんたん入力 ${S.mode === 'off' ? qq('日付をタップすると休み（赤）。勤務時間を選んで「残りを埋める」で、休み以外の日すべてに入ります（入力済みの日も上書き）。保存を呼び出す＝自分で保存した曜日ごとの希望／前回をコピー＝前回の期間の希望', 'かんたん入力の説明') : qq('曜日と勤務時間を選んで「選んだ曜日に入力」。その曜日の日すべてに入ります（入力済みの日も上書き）。保存を呼び出す＝自分で保存した曜日ごとの希望／前回をコピー＝前回の期間の希望', 'かんたん入力の説明')}</b>
     <div class="seg"><button data-mode="days" class="${S.mode === 'days' ? 'on' : ''}">日ごとに入力</button><button data-mode="off" class="${S.mode === 'off' ? 'on' : ''}">休みだけ選ぶ</button></div>
-    ${S.mode === 'off' ? `<div class="hint">出られない日をタップ（赤）。残りの日は下の時間で埋めます。</div><div class="row"><select id="base">${pre.map(p => `<option>${p}</option>`).join('')}<option value="__custom">手入力（時間を打つ）</option></select><span class="man" id="baseMan" hidden><input inputmode="decimal" placeholder="入り 例 17.5"><input inputmode="decimal" placeholder="終わり 例 23"></span><button class="primary" id="fillOff">残りを埋める</button></div>`
+    ${S.mode === 'off' ? `<div class="hint">休みの日を選んで、残りを一括入力</div><div class="row"><select id="base" aria-label="勤務時間">${pre.map(p => `<option value="${p}">${fmtP(p)}</option>`).join('')}<option value="__custom">手入力（時間を打つ）</option></select><span class="man" id="baseMan" hidden><input inputmode="decimal" placeholder="入り 例 17.5"><input inputmode="decimal" placeholder="終わり 例 23"></span><button class="primary" id="fillOff">残りを埋める</button></div>`
     : `<div class="chips" id="dows">${['月', '火', '水', '木', '金', '土', '日'].map((w, i) => `<button class="chip" data-dow="${(i + 1) % 7}">${w}</button>`).join('')}<button class="chip" data-g="wd">平日</button><button class="chip" data-g="we">土日祝</button><button class="chip" data-g="all">全部</button></div>
-      <div class="row"><select id="bulkT">${pre.map(p => `<option>${p}</option>`).join('')}<option value="__custom">手入力（時間を打つ）</option><option value="休">休み</option></select><span class="man" id="bulkMan" hidden><input inputmode="decimal" placeholder="入り 例 17.5"><input inputmode="decimal" placeholder="終わり 例 23"></span><button class="primary" id="bulk">選んだ曜日に入れる</button></div>`}
-    <div class="row"><button id="tplUse" ${S.tpl && Object.keys(S.tpl).length ? '' : 'disabled'}>いつものテンプレ</button><button id="prev" ${d.prev ? '' : 'disabled'}>前回（${d.prev ? esc(d.prev.label) : 'なし'}）と同じ</button></div>
-    <div class="row"><button id="tplSave">今の内容をテンプレに保存</button><button id="clr">全部消す</button></div>
+      <div class="row"><select id="bulkT" aria-label="勤務時間">${pre.map(p => `<option value="${p}">${fmtP(p)}</option>`).join('')}<option value="__custom">手入力（時間を打つ）</option><option value="休">休み</option></select><span class="man" id="bulkMan" hidden><input inputmode="decimal" placeholder="入り 例 17.5"><input inputmode="decimal" placeholder="終わり 例 23"></span><button class="primary" id="bulk">選んだ曜日に入力</button></div>`}
+    <div class="row"><button id="tplUse" ${S.tpl && Object.keys(S.tpl).length ? '' : 'disabled'}>保存を呼び出す</button><button id="prev" ${d.prev ? '' : 'disabled'}>前回をコピー</button></div>
+    <div class="row"><button id="tplSave">今の希望を保存</button><button id="clr">全部消す</button></div>
   </div>
-  <div class="card ${S.mode === 'off' ? 'offmode' : ''}" id="days"><div class="hint">時間はシフト表と同じ書き方（17.5＝17:30、25＝翌1時、31＝翌7時）</div>
+  <div class="card ${S.mode === 'off' ? 'offmode' : ''}" id="days"><div class="hint">時間の書き方 ${qq('17.5＝17:30、25＝翌1時、31＝翌7時（シフト表と同じ）', '時間の書き方')}</div>
     ${d.days.map((x, i) => { const v = S.vals[i] || ''; const off = v === '休'; const [a, b] = off || !v ? ['', ''] : v.split('-');
       return `<div class="day ${x.off ? 'we' : ''} ${off ? 'isoff' : ''}" data-i="${i}"><div class="dt">${esc(x.md)}<small>${esc(x.wd)}</small></div><input inputmode="decimal" data-f="s" value="${esc(a)}" class="${a ? 'has' : ''}" placeholder="入り"><input inputmode="decimal" data-f="e" value="${esc(b)}" class="${b ? 'has' : ''}" placeholder="終わり"><button class="offb" data-off>休</button><select class="pick">${opts}</select></div>`; }).join('')}
   </div>
@@ -318,8 +328,8 @@ function render() {
   const set = (i, v) => { S.vals[i] = v; const row = app.querySelector(`.day[data-i="${i}"]`); const off = v === '休'; const [a, b] = off || !v ? ['', ''] : v.split('-'); row.classList.toggle('isoff', off); const [s, e] = row.querySelectorAll('input'); s.value = a; e.value = b; s.classList.toggle('has', !!a); e.classList.toggle('has', !!b); sum(); };
   const manWire = (selId, manId) => { const sel = $(selId), man = $(manId); if (!sel || !man) return; const upd = () => { man.hidden = sel.value !== '__custom'; if (!man.hidden) man.querySelector('input').focus(); }; sel.onchange = upd; if (!pre.length) { sel.value = '__custom'; } upd(); }; manWire('#base', '#baseMan'); manWire('#bulkT', '#bulkMan');
   const pickVal = (selId, manId) => { /* 選択肢か手入力から「入り-終わり」を作る。だめなら null */ const sel = $(selId); if (sel.value !== '__custom') return sel.value; const [a, b] = [...$(manId).querySelectorAll('input')].map(x => x.value.trim().replace(/[０-９．：]/g, ch => String.fromCharCode(ch.charCodeAt(0) - 0xFEE0)).replace(':30', '.5').replace(':00', '')); const n = x => { const v = parseFloat(x); return Number.isFinite(v) && v * 2 === Math.round(v * 2) ? v : NaN; }; const sv = n(a), ev = n(b); if (!a || !b || Number.isNaN(sv) || Number.isNaN(ev)) { toast('入りと終わりを数字で入れてください（例 17.5 と 23）'); return null; } if (sv < 5 || sv > 35.5 || ev < 5 || ev > 36 || ev <= sv) { toast('時間の範囲が合いません（5〜36、終わりは入りより後）'); return null; } return sv + '-' + ev; };
-  if ($('#bulk')) $('#bulk').onclick = () => { const ds = [...app.querySelectorAll('#dows [data-dow].on')].map(x => +x.dataset.dow); if (!ds.length) return toast('曜日を選んでください'); const v = pickVal('#bulkT', '#bulkMan'); if (v == null) return; let n = 0; d.days.forEach((x, i) => { if (ds.includes(x.dow) || (S.hol && x.hol)) { set(i, v); n++; } }); toast(`${n}日に「${v === '休' ? '休み' : v}」を入れました`); };
-  if ($('#fillOff')) $('#fillOff').onclick = () => { const v = pickVal('#base', '#baseMan'); if (v == null) return; d.days.forEach((x, i) => { if (S.vals[i] !== '休') set(i, v); }); toast('休み以外を ' + v + ' で埋めました'); };
+  if ($('#bulk')) $('#bulk').onclick = () => { const ds = [...app.querySelectorAll('#dows [data-dow].on')].map(x => +x.dataset.dow); if (!ds.length) return toast('曜日を選んでください'); const v = pickVal('#bulkT', '#bulkMan'); if (v == null) return; const tgt = d.days.map((x, i) => (ds.includes(x.dow) || (S.hol && x.hol)) ? i : -1).filter(i => i >= 0); const filled = tgt.filter(i => S.vals[i] && S.vals[i] !== v).length; if (filled && !confirm(`入力済みの${filled}日も変更しますか？`)) return; let n = 0; tgt.forEach(i => { set(i, v); n++; }); toast(`${n}日に「${v === '休' ? '休み' : v}」を入れました`); };
+  if ($('#fillOff')) $('#fillOff').onclick = () => { const v = pickVal('#base', '#baseMan'); if (v == null) return; const filled = d.days.filter((x, i) => S.vals[i] && S.vals[i] !== '休' && S.vals[i] !== v).length; if (filled && !confirm(`入力済みの${filled}日も変更しますか？`)) return; d.days.forEach((x, i) => { if (S.vals[i] !== '休') set(i, v); }); toast('休み以外を ' + fmtP(v) + ' で埋めました'); };
   $('#tplUse').onclick = () => { let n = 0; d.days.forEach((x, i) => { const v = S.tpl[x.dow]; if (v !== undefined) { set(i, v); n++; } }); toast(`テンプレで${n}日を埋めました`); };
   $('#prev').onclick = () => { let n = 0; d.days.forEach((x, i) => { const v = d.prev.byDow[x.dow]; if (v !== undefined) { set(i, v); n++; } }); toast(n ? `前回の曜日ごとの希望を${n}日に写しました` : '前回の希望が見つかりません'); };
   $('#tplSave').onclick = async () => { const t = {}; d.days.forEach((x, i) => { if (S.vals[i]) t[x.dow] = S.vals[i]; }); if (!Object.keys(t).length) return toast('先に何日か入力してください'); try { await call('portal_saveTemplate', S.ses, t); S.tpl = t; localStorage.setItem('casa-ses', JSON.stringify({ ses: S.ses, name: S.name, tpl: S.tpl })); toast('曜日ごとのテンプレを保存しました（どのスマホでも使えます）'); $('#tplUse').disabled = false; } catch (e) { toast(e.message); } };
@@ -332,7 +342,7 @@ function render() {
     row.onclick = e => { if (S.mode !== 'off' || e.target.closest('input,select,button')) return; set(i, S.vals[i] === '休' ? '' : '休'); }; });
 }
 function counts() { let on = 0, off = 0, none = 0; S.vals.forEach(v => { if (v === '休') off++; else if (v && /^\d/.test(v)) on++; else none++; }); return { on, off, none }; }
-function sum() { const c = counts(); const el = $('#sum'); el.classList.remove('armed'); el.textContent = `出勤できる ${c.on}日・休み ${c.off}日・未入力 ${c.none}日`; const b = $('#send'); delete b.dataset.armed; b.textContent = '送信する'; }
+function sum() { const c = counts(); const el = $('#sum'); el.classList.remove('armed'); el.innerHTML = `出勤できる ${c.on}日・休み ${c.off}日・未入力 ${c.none}日 ${qq('未入力の日は「希望なし」として店長に届きます。そのまま送信できます', '未入力の説明')}`; const b = $('#send'); delete b.dataset.armed; b.textContent = '送信する'; }
 $('#send').onclick = async () => {
   const b = $('#send'), c = counts();
   for (let i = 0; i < S.vals.length; i++) { const v = S.vals[i]; if (v && v !== '休' && !/^\d{1,2}(\.5)?-\d{1,2}(\.5)?$/.test(v)) return toast(`${S.data.days[i].md} の時間を「18-25」のように入れてください`, 3500); }
