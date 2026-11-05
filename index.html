@@ -51,7 +51,8 @@
   const devKeep = k => { window.__adev = k; lsSet(DEV_KEY, k); try { if (window.__staticBase) { const u = new URL(location.href); if (u.searchParams.get('k') !== k) { u.searchParams.set('k', k); u.searchParams.delete('pw'); history.replaceState(history.state, '', u.toString()); } } } catch (e) {} };
   const devClear = () => { window.__adev = ''; try { localStorage.removeItem(DEV_KEY); } catch (e) {} try { if (window.__staticBase) { const u = new URL(location.href); if (u.searchParams.has('k')) { u.searchParams.delete('k'); history.replaceState(history.state, '', u.toString()); } } } catch (e) {} };
   const authObj = () => ({ pass: lsGet(PASS_KEY), who: lsGet(WHO_KEY), dev: devGet() });
-  const devSave = nm => { if (!nm) return Promise.resolve(); return call('admin_devNew', nm).then(r => { if (r && r.dev) devKeep(r.dev); }).catch(e => dbg('devNew ' + (e && e.message))); };
+  let devTourSeen = false; /* この端末（キー）がチュートリアルを見たか */
+  const devSave = nm => { if (!nm) return Promise.resolve(); return call('admin_devNew', nm, devTourSeen).then(r => { if (r && r.dev) devKeep(r.dev); }).catch(e => dbg('devNew ' + (e && e.message))); };
   const call = async (fn, ...args) => { /* Google 側の一時エラー（unavailable）は少し待って最大2回やり直す */ for (let i = 0; ; i++) { try { return await call1(fn, ...args); } catch (e) { if (e.code !== 'unavailable' || i >= 2) throw e; dbg('retry ' + fn); await new Promise(r => setTimeout(r, 1200 * (i + 1))); } } };
   const call1 = (fn, ...args) => new Promise((res, rej) => {
     const t0 = Date.now(); dbg('call ' + fn); const res2 = v => { dbg('ok ' + fn + ' ' + (Date.now() - t0) + 'ms ' + (v && v.docs ? Object.keys(v.docs).length + ' docs' : '')); res(v); };
@@ -173,7 +174,7 @@ async function write(op) { await ensure(); writes++; inflight++; (window.__wlog 
   const refreshWho = () => { const b = document.querySelector('.gas-who'); if (b) b.remove(); whoButton(); };
   const boot = async () => { if (window.__photoOnly) return; /* 写真だけの表示では名前を聞かない */
     const dk = devGet(); /* 0) 端末キー: サーバーに覚えた名前を戻す（URL の ?me= より優先。名前を変えたらキーの名前も変わるため） */
-    if (dk) { try { const r = await call('admin_devGet'); if (r && r.who) { devKeep(dk); window.__who = r.who; window.__topMe = r.who; lsSet(WHO_KEY, r.who); whoButton(); refreshWho(); return; } devClear(); } catch (e) { dbg('devGet ' + (e && e.message)); if (lsGet(WHO_KEY)) { whoButton(); return; } } }
+    if (dk) { try { const r = await call('admin_devGet'); if (r && r.who) { devTourSeen = !!r.tour; devKeep(dk); window.__who = r.who; window.__topMe = r.who; lsSet(WHO_KEY, r.who); whoButton(); refreshWho(); return; } devClear(); } catch (e) { dbg('devGet ' + (e && e.message)); if (lsGet(WHO_KEY)) { whoButton(); return; } } }
     const fin = () => { const n = lsGet(WHO_KEY); if (n && !devGet()) devSave(n); }; /* 名前が決まったら、この端末のキーを作る */
     if (window.__topMe) { lsSet(WHO_KEY, window.__topMe); } whoButton(); if (window.__topMe) { call('admin_setWho', window.__topMe).catch(() => {}); fin(); return; }
     /* 1) URL の ?me=名前（最優先）  2) この画面の保存領域  3) サーバーに覚えた名前（Google にログイン中の端末のみ）  4) どれも無ければ聞く */
@@ -182,7 +183,11 @@ async function write(op) { await ensure(); writes++; inflight++; (window.__wlog 
     try { const r = await call('admin_getWho'); if (r && r.who) { window.__who = r.who; lsSet(WHO_KEY, r.who); refreshWho(); fin(); return; } } catch (e) { dbg('getWho ' + (e && e.message)); }
     let asked = false; try { asked = !!sessionStorage.getItem('casa-admin-who-asked'); sessionStorage.setItem('casa-admin-who-asked', '1'); } catch (e) {}
     if (!asked) setTimeout(() => { if (!document.querySelector('.gas-modal')) askWho(); }, 600); };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
+  let bootDone; const bootP = new Promise(r => { bootDone = r; }); const boot2 = () => { Promise.resolve().then(boot).catch(() => {}).then(() => bootDone()); };
+  /* チュートリアル: 端末キーの記録・この画面の記録・サーバーの記録（ui/tour）を、読み込みが終わってから見る（前回のデータで先に画面を出すので、待たないと毎回出ていた 2026-11-05） */
+  window.__gasDb.tourSeen = async () => { await Promise.race([Promise.all([bootP, ensure().catch(() => {})]), sleep(15000)]); return devTourSeen || !!docs['ui/tour']; };
+  window.__gasDb.tourMark = () => { devTourSeen = true; if (devGet()) call('admin_devTour').catch(() => {}); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot2); else boot2();
 })();
 </script></head><body>
 <title>casaシフト表</title>
@@ -3705,7 +3710,10 @@ function photoOnlyBoot() { /* ?daily=<店舗>&key=…&img=1: 店長アプリを�
   photoOnlyDone = true; if (!hit) { toast('この日のシフトはまだありません', true); return; }
   if (cur !== hit.id) { switchSheet(hit.id); render(); } setTimeout(() => openPhoto(hit.i), 300);
 }
-function maybeTour() { photoOnlyBoot(); if (tourChecked || view !== 'grid' || !config || !cur) return; tourChecked = true; let seen = !!(window.__topMe || window.__who || window.__photoOnly); /* 名前入りURL（＝設定済みの端末）では自動で出さない。保存領域が毎回消える端末のため */ try { seen = seen || !!localStorage.getItem(TOUR_KEY); } catch {} try { const g = window.__gasDb && window.__gasDb.docs; if (g && g['ui/tour']) seen = true; } catch {} /* 一度出したら全端末で出さない（サーバーに記録。オーナー指示 2026-10-21「最初だけでいい」） */ if (!seen) { try { if (dbApi && !localMode) Promise.resolve(dbApi.doc('ui/tour').set({ shownAt: new Date().toISOString() })).catch(() => {}); } catch {} } if (!seen) setTimeout(() => { if (!$('.tour') && view === 'grid') startTour('all'); }, 700); }
+function maybeTour() { photoOnlyBoot(); if (tourChecked || view !== 'grid' || !config || !cur) return; tourChecked = true; let seen = !!(window.__topMe || window.__who || window.__photoOnly); /* 名前入りURL（＝設定済みの端末）では自動で出さない。保存領域が毎回消える端末のため */ try { seen = seen || !!localStorage.getItem(TOUR_KEY); } catch {} try { const g = window.__gasDb && window.__gasDb.docs; if (g && g['ui/tour']) seen = true; } catch {} /* 一度出したら全端末で出さない（サーバーに記録。オーナー指示 2026-10-21「最初だけでいい」） */ const show = () => { try { localStorage.setItem(TOUR_KEY, '1'); } catch {} try { window.__gasDb && window.__gasDb.tourMark && window.__gasDb.tourMark(); } catch {} try { if (dbApi && !localMode) Promise.resolve(dbApi.doc('ui/tour').set({ shownAt: new Date().toISOString() })).catch(() => {}); } catch {} setTimeout(() => { if (!$('.tour') && view === 'grid') startTour('all'); }, 700); };
+  if (seen) { try { window.__gasDb && window.__gasDb.tourMark && window.__gasDb.tourMark(); } catch {} return; }
+  const gd = window.__gasDb; if (gd && gd.tourSeen) { gd.tourSeen().then(s2 => { if (s2) { try { localStorage.setItem(TOUR_KEY, '1'); } catch {} gd.tourMark(); } else show(); }).catch(() => {}); return; } /* 端末キーとサーバーの記録を読み終えてから決める（オーナー指示 2026-11-05「端末IDで一回出たらもう出ない」） */
+  show(); }
 function startTour(kind, resumeI) { try { startTour_(kind || 'all', resumeI); } catch (e) { console.error(e); toast('練習モードを始められませんでした: ' + (e && e.message), true); if (practice) endTour(); } }
 function startTour_(kind, resumeI) {
   closeMenus(); document.querySelectorAll('.pop,.photo').forEach(p => p.remove()); document.querySelectorAll('.drawer.open').forEach(d => d.classList.remove('open')); if (view !== 'grid') showView('grid');
