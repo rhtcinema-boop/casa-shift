@@ -168,7 +168,12 @@ async function start() {
   if (a2hsGuide(true) === 'redirect') return;
   try { S.init = await call('portal_init'); } catch (e) { app.innerHTML = `<div class="card err">${esc(e.message)}</div>`; return; }
   try { const s = JSON.parse(localStorage.getItem('casa-ses') || 'null'); if (s) { S.ses = s.ses; S.name = s.name; S.tpl = s.tpl; } } catch (e) {}
-  if (!window.CASA_STATIC) { const nu = NEW_URL[S.init && S.init.stores && (S.init.stores.find(s => s.current) || {}).name]; if (nu) { const b = document.createElement('a'); b.href = nu; b.target = '_top'; b.style.cssText = 'display:block;margin:8px 12px 0;padding:10px 12px;border-radius:12px;background:#FFF4E5;color:#8A4B00;font:600 13px -apple-system,sans-serif;text-decoration:none'; b.textContent = '📱 新しいアドレスができました（ホーム画面に追加できる版）→ こちらを開く'; b.onclick = () => { const k = devKey(); if (k) b.href = nu + '&k=' + encodeURIComponent(k); }; /* ログイン中ならキーを持っていく（新しい方でまたログインしなくていい） */ app.parentNode.insertBefore(b, app); } }
+  if (!window.CASA_STATIC) { const nu = NEW_URL[S.init && S.init.stores && (S.init.stores.find(s => s.current) || {}).name]; if (nu) { /* 古いURL（Google）で開いた人は新しいURLへ移す。ログイン中なら端末キーを持っていく（オーナー指示 2026-11-05） */
+    let k = devKey(); if (!k && S.ses) { try { k = (await call('portal_devFromSes', S.ses)).dev || ''; } catch (e) {} }
+    const url = nu + (k ? '&k=' + encodeURIComponent(k) : '');
+    app.innerHTML = '<div class="card" style="text-align:center;padding:28px 18px;display:grid;gap:14px"><div style="font-size:40px">📱</div><h2 style="margin:0;font-size:20px">新しいアドレスに移りました</h2><p style="margin:0;color:#6e6e73;font-size:14px;line-height:1.6">下のボタンで開いて、<b>ホーム画面に追加し直して</b>ください。' + (k ? 'ログインはそのまま引き継ぎます。' : '') + '</p><a id="mvgo" target="_top" style="display:block;background:#0071e3;color:#fff;text-decoration:none;padding:15px;border-radius:14px;font-weight:700;font-size:17px">新しいアドレスで開く</a></div>';
+    $('#mvgo').href = url; try { window.top.location.replace(url); } catch (e) {} /* 自動で移れない画面（Googleの枠の中）ではボタンを押してもらう */
+    return; } }
   if (S.ses) { devKeep(devKey()); return home(); }
   if (await resume()) return home();
   login();
