@@ -7,6 +7,7 @@
   var q = new URLSearchParams(location.search);
   if (q.get('me')) { window.__who = q.get('me').trim().slice(0, 30); window.__topMe = window.__who; }
   if (q.get('pw')) window.__pass = q.get('pw');
+  if (q.get('k')) window.__adev = q.get('k'); /* 店長アプリの端末キー（ホーム画面アプリは保存領域が別なのでURLにも持つ） */
   window.__staticBase = location.origin + location.pathname;
   function runner(ok, ng) {
     var o = {
