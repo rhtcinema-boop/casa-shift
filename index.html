@@ -10,6 +10,7 @@
   var q = new URLSearchParams(location.search);
   if (q.get('me')) { window.__who = q.get('me').trim().slice(0, 30); window.__topMe = window.__who; }
   if (q.get('pw')) window.__pass = q.get('pw');
+  if (q.get('k')) window.__adev = q.get('k'); /* 店長アプリの端末キー（ホーム画面アプリは保存領域が別なのでURLにも持つ） */
   window.__staticBase = location.origin + location.pathname;
   function runner(ok, ng) {
     var o = {
@@ -45,7 +46,12 @@
   window.__who = window.__who || ''; /* サーバー（端末キー）や URL の ?me= から来た名前 */
   const lsGet = k => { try { const v = localStorage.getItem(k) || ''; if (k === WHO_KEY) return v || window.__who || ''; if (k === PASS_KEY) return v || window.__pass || ''; return v; } catch (e) { return k === WHO_KEY ? (window.__who || '') : k === PASS_KEY ? (window.__pass || '') : ''; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
-  const authObj = () => ({ pass: lsGet(PASS_KEY), who: lsGet(WHO_KEY) });
+  const DEV_KEY = 'casa-admin-dev'; /* 端末キー（2026-11-05）。保存領域とURLの ?k= の両方に持つ */
+  const devGet = () => { let v = ''; try { v = localStorage.getItem(DEV_KEY) || ''; } catch (e) {} return /^[0-9a-f]{40}$/.test(v) ? v : (/^[0-9a-f]{40}$/.test(window.__adev || '') ? window.__adev : ''); };
+  const devKeep = k => { window.__adev = k; lsSet(DEV_KEY, k); try { if (window.__staticBase) { const u = new URL(location.href); if (u.searchParams.get('k') !== k) { u.searchParams.set('k', k); u.searchParams.delete('pw'); history.replaceState(history.state, '', u.toString()); } } } catch (e) {} };
+  const devClear = () => { window.__adev = ''; try { localStorage.removeItem(DEV_KEY); } catch (e) {} try { if (window.__staticBase) { const u = new URL(location.href); if (u.searchParams.has('k')) { u.searchParams.delete('k'); history.replaceState(history.state, '', u.toString()); } } } catch (e) {} };
+  const authObj = () => ({ pass: lsGet(PASS_KEY), who: lsGet(WHO_KEY), dev: devGet() });
+  const devSave = nm => { if (!nm) return Promise.resolve(); return call('admin_devNew', nm).then(r => { if (r && r.dev) devKeep(r.dev); }).catch(e => dbg('devNew ' + (e && e.message))); };
   const call = async (fn, ...args) => { /* Google 側の一時エラー（unavailable）は少し待って最大2回やり直す */ for (let i = 0; ; i++) { try { return await call1(fn, ...args); } catch (e) { if (e.code !== 'unavailable' || i >= 2) throw e; dbg('retry ' + fn); await new Promise(r => setTimeout(r, 1200 * (i + 1))); } } };
   const call1 = (fn, ...args) => new Promise((res, rej) => {
     const t0 = Date.now(); dbg('call ' + fn); const res2 = v => { dbg('ok ' + fn + ' ' + (Date.now() - t0) + 'ms ' + (v && v.docs ? Object.keys(v.docs).length + ' docs' : '')); res(v); };
@@ -87,9 +93,9 @@
     });
   }
   const askPass = bad => modal('合言葉', bad ? '合言葉が違います。もう一度入れてください。' : 'この店長アプリを開くための合言葉を入れてください。', '', '合言葉', v => lsSet(PASS_KEY, v), false);
-  const askWho = () => modal('あなたの名前', '変更履歴に「誰が変えたか」を残すために使います。暗証番号はありません。一度入れればこの端末では覚えます。', lsGet(WHO_KEY), '例: 山田', v => { lsSet(WHO_KEY, v); window.__who = v; refreshWho(); call('admin_setWho', v).catch(e => dbg('setWho ' + (e && e.message))); offerNameUrl(v); }, true); /* 画面の読み直しはしない（Apps Script の枠内で reload すると真っ白になる） */
+  const askWho = () => modal('あなたの名前', '変更履歴に「誰が変えたか」を残すために使います。暗証番号はありません。一度入れればこの端末では覚えます。', lsGet(WHO_KEY), '例: 山田', v => { lsSet(WHO_KEY, v); window.__who = v; refreshWho(); call('admin_setWho', v).catch(e => dbg('setWho ' + (e && e.message))); devSave(v).then(() => { if (!window.__staticBase) offerNameUrl(v); }); }, true); /* GitHub Pages 版はURLが自動で ?k= 付きになるので案内は出さない */ /* 画面の読み直しはしない（Apps Script の枠内で reload すると真っ白になる） */
   // iPhone 等では画面内の保存領域が毎回消えるので、名前入りURL（?me=名前）に切り替えて、それをホーム画面に追加してもらう
-  const nameUrl = v => { const base = String(window.__staticBase || window.__appUrl || '').split(/[?#]/)[0]; const pw = lsGet(PASS_KEY); return base ? base + '?admin=1&me=' + encodeURIComponent(v) + (pw ? '&pw=' + encodeURIComponent(pw) : '') : ''; }; /* 合言葉もURLに持たせる（ホーム画面から開いても聞かれない） */
+  const nameUrl = v => { const base = String(window.__staticBase || window.__appUrl || '').split(/[?#]/)[0]; const pw = lsGet(PASS_KEY); const dk = devGet(); return base ? base + '?admin=1' + (dk ? '&k=' + dk : '&me=' + encodeURIComponent(v) + (pw ? '&pw=' + encodeURIComponent(pw) : '')) : ''; }; /* 合言葉もURLに持たせる（ホーム画面から開いても聞かれない） */
   function offerNameUrl(v) { const u = nameUrl(v); if (!u) return; const cur = (window.__topMe || '') === v; if (cur) return;
     const ov = document.createElement('div'); ov.className = 'gas-modal';
     ov.innerHTML = '<div class="box" role="dialog" aria-label="名前を覚えるURL"><h3>次回から名前を聞かれないようにする</h3><p>名前入りのURLに切り替えます。切り替わったら、<b>ホーム画面のアイコンを一度消して「ホーム画面に追加」し直してください</b>（ブックマークも同様）。そのアイコンから開けば、もう名前は聞かれません。</p><p style="word-break:break-all;font-size:12px;color:#6e6e73"></p><div class="btns"><button class="skip" type="button">このまま</button><button class="ok" type="button">URLを切り替える</button></div></div>';
@@ -165,11 +171,15 @@ async function write(op) { await ensure(); writes++; inflight++; (window.__wlog 
   window.claude = { use: async n => { dbg('use ' + n); return (n === 'db' ? db : n === 'user' ? user : n === 'downloads' ? downloads : null); } };
   window.__gasDb = { get inflight() { return inflight; }, get docs() { return docs; }, get rev() { return rev; }, get writes() { return writes; }, poll, who: whoId, write: (path, data) => write({ op: 'set', path, data }), rake: tab => call('admin_rake', tab), syncNow: id => call('admin_syncNow', id), publishMeta: id => call('admin_publishMeta', id) };
   const refreshWho = () => { const b = document.querySelector('.gas-who'); if (b) b.remove(); whoButton(); };
-  const boot = async () => { if (window.__photoOnly) return; /* 写真だけの表示では名前を聞かない */ if (window.__topMe) { lsSet(WHO_KEY, window.__topMe); } whoButton(); if (window.__topMe) { call('admin_setWho', window.__topMe).catch(() => {}); return; }
+  const boot = async () => { if (window.__photoOnly) return; /* 写真だけの表示では名前を聞かない */
+    const dk = devGet(); /* 0) 端末キー: サーバーに覚えた名前を戻す（URL の ?me= より優先。名前を変えたらキーの名前も変わるため） */
+    if (dk) { try { const r = await call('admin_devGet'); if (r && r.who) { devKeep(dk); window.__who = r.who; window.__topMe = r.who; lsSet(WHO_KEY, r.who); whoButton(); refreshWho(); return; } devClear(); } catch (e) { dbg('devGet ' + (e && e.message)); if (lsGet(WHO_KEY)) { whoButton(); return; } } }
+    const fin = () => { const n = lsGet(WHO_KEY); if (n && !devGet()) devSave(n); }; /* 名前が決まったら、この端末のキーを作る */
+    if (window.__topMe) { lsSet(WHO_KEY, window.__topMe); } whoButton(); if (window.__topMe) { call('admin_setWho', window.__topMe).catch(() => {}); fin(); return; }
     /* 1) URL の ?me=名前（最優先）  2) この画面の保存領域  3) サーバーに覚えた名前（Google にログイン中の端末のみ）  4) どれも無ければ聞く */
-    try { const loc = await new Promise(r => { try { google.script.url.getLocation(r); } catch (e) { r(null); } setTimeout(() => r(null), 3000); }); const m = loc && loc.parameter && loc.parameter.me ? String(loc.parameter.me).trim().slice(0, 30) : ''; if (m) { window.__who = m; window.__topMe = m; lsSet(WHO_KEY, m); refreshWho(); call('admin_setWho', m).catch(() => {}); return; } } catch (e) {}
-    if (lsGet(WHO_KEY)) return;
-    try { const r = await call('admin_getWho'); if (r && r.who) { window.__who = r.who; lsSet(WHO_KEY, r.who); refreshWho(); return; } } catch (e) { dbg('getWho ' + (e && e.message)); }
+    try { const loc = await new Promise(r => { try { google.script.url.getLocation(r); } catch (e) { r(null); } setTimeout(() => r(null), 3000); }); const m = loc && loc.parameter && loc.parameter.me ? String(loc.parameter.me).trim().slice(0, 30) : ''; if (m) { window.__who = m; window.__topMe = m; lsSet(WHO_KEY, m); refreshWho(); call('admin_setWho', m).catch(() => {}); fin(); return; } } catch (e) {}
+    if (lsGet(WHO_KEY)) { fin(); return; }
+    try { const r = await call('admin_getWho'); if (r && r.who) { window.__who = r.who; lsSet(WHO_KEY, r.who); refreshWho(); fin(); return; } } catch (e) { dbg('getWho ' + (e && e.message)); }
     let asked = false; try { asked = !!sessionStorage.getItem('casa-admin-who-asked'); sessionStorage.setItem('casa-admin-who-asked', '1'); } catch (e) {}
     if (!asked) setTimeout(() => { if (!document.querySelector('.gas-modal')) askWho(); }, 600); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
