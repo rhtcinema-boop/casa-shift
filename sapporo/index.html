@@ -168,7 +168,7 @@ async function start() {
   if (a2hsGuide(true) === 'redirect') return;
   try { S.init = await call('portal_init'); } catch (e) { app.innerHTML = `<div class="card err">${esc(e.message)}</div>`; return; }
   try { const s = JSON.parse(localStorage.getItem('casa-ses') || 'null'); if (s) { S.ses = s.ses; S.name = s.name; S.tpl = s.tpl; } } catch (e) {}
-  if (!window.CASA_STATIC) { const nu = NEW_URL[S.init && S.init.stores && (S.init.stores.find(s => s.current) || {}).name]; if (nu) { const b = document.createElement('a'); b.href = nu; b.target = '_top'; b.style.cssText = 'display:block;margin:8px 12px 0;padding:10px 12px;border-radius:12px;background:#FFF4E5;color:#8A4B00;font:600 13px -apple-system,sans-serif;text-decoration:none'; b.textContent = '📱 新しいアドレスができました（ホーム画面に追加できる版）→ こちらを開く'; app.parentNode.insertBefore(b, app); } }
+  if (!window.CASA_STATIC) { const nu = NEW_URL[S.init && S.init.stores && (S.init.stores.find(s => s.current) || {}).name]; if (nu) { const b = document.createElement('a'); b.href = nu; b.target = '_top'; b.style.cssText = 'display:block;margin:8px 12px 0;padding:10px 12px;border-radius:12px;background:#FFF4E5;color:#8A4B00;font:600 13px -apple-system,sans-serif;text-decoration:none'; b.textContent = '📱 新しいアドレスができました（ホーム画面に追加できる版）→ こちらを開く'; b.onclick = () => { const k = devKey(); if (k) b.href = nu + '&k=' + encodeURIComponent(k); }; /* ログイン中ならキーを持っていく（新しい方でまたログインしなくていい） */ app.parentNode.insertBefore(b, app); } }
   if (S.ses) { devKeep(devKey()); return home(); }
   if (await resume()) return home();
   login();
