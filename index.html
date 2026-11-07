@@ -1861,7 +1861,7 @@ const HOLIDAYS = new Set(['2025-01-01','2025-01-13','2025-02-11','2025-02-23','2
 const $ = (s, el = document) => el.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmtT = t => (t == null ? '' : (Number.isInteger(t) ? String(t) : t.toFixed(1)));
-const clock = t => { const h = Math.floor(t) % 24, m = t % 1 ? '30' : '00'; return (t >= 24 ? '翌' : '') + h + ':' + m; };
+const clock = t => { if (t == null) return ''; const x = t >= 24 ? t - 24 : t; return (t >= 24 ? '翌' : '') + (Number.isInteger(x) ? String(x) : x.toFixed(1)); }; /* 表記はシフト表と同じ: 13.5・翌5（2026-11-07） */
 const hhmm = t => Math.floor(t) + ':' + (t % 1 ? '30' : '00');
 const yen = n => (n < 0 ? '-' : '') + '¥' + Math.round(Math.abs(n)).toLocaleString('ja-JP');
 const uid = () => Math.random().toString(36).slice(2, 8);
@@ -2615,7 +2615,7 @@ function showRoleBar() {
 function cellErr(ed, msg) {
   editing = ed; ed.td.classList.remove('bad'); void ed.td.offsetWidth; ed.td.classList.add('bad'); ed.inp.focus();
   let tip = document.querySelector('.cellerr'); if (!tip) { tip = document.createElement('div'); tip.className = 'cellerr'; tip.id = 'cellerr'; tip.setAttribute('role', 'status'); tip.setAttribute('aria-live', 'polite'); document.body.appendChild(tip); } ed.inp.setAttribute('aria-describedby', 'cellerr'); ed.inp.setAttribute('aria-invalid', 'true');
-  tip.textContent = ''; const short = /^数値で入力/.test(msg) ? ['数値を入力してください', '例: 18・18.5・25（翌1時）'] : [msg]; short.forEach((line, i) => { const el = document.createElement(i ? 'small' : 'b'); el.textContent = line; tip.appendChild(el); }); tip.title = msg; const r = ed.td.getBoundingClientRect(); tip.style.left = '0px'; tip.style.top = '0px'; tip.classList.remove('in');
+  tip.textContent = ''; const short = /^数値で入力/.test(msg) ? ['数値を入力してください', '例: 18・18.5・25（翌1）'] : [msg]; short.forEach((line, i) => { const el = document.createElement(i ? 'small' : 'b'); el.textContent = line; tip.appendChild(el); }); tip.title = msg; const r = ed.td.getBoundingClientRect(); tip.style.left = '0px'; tip.style.top = '0px'; tip.classList.remove('in');
   const w = tip.offsetWidth; let x = r.left + r.width / 2 - w / 2; x = Math.max(8, Math.min(innerWidth - w - 8, x)); let y = r.bottom + 4; if (y + tip.offsetHeight > innerHeight - 8) y = r.top - tip.offsetHeight - 6;
   tip.style.left = x + 'px'; tip.style.top = y + 'px'; requestAnimationFrame(() => tip.classList.add('in'));
   ed.inp.addEventListener('input', clearCellErr, { once: true });
@@ -3246,7 +3246,7 @@ function renderTargets() {
       <label>ボーナス/日<input type="number" class="inp" data-pf="bonus" value="${p.bonus || 0}" style="width:100px"></label><span class="spacer"></span><button class="btn small danger" data-pdel="${pi}" ${tg.patterns.length > 1 ? '' : 'disabled'}>このパターンを削除</button></div>`;
     // 人件費の表
     const sRange = row => { let a = -1, b = -1; row.forEach((on, i) => { if (on) { if (a < 0) a = i; b = i; } }); return a < 0 ? ['', ''] : [T0 + a / 2, T0 + (b + 1) / 2]; };
-    h += `<h3>人件費 <span class="hint">入り・終わりを打つ（17.5＝17時半、25＝翌1時）か、右の帯をドラッグで塗る。Enter で下へ、Tab で右へ。深夜（${tg.nightFrom}時〜）は濃い緑</span></h3><div class="sswrap"><table class="ss" data-grid="staff"><thead><tr><th class="sx no">No</th><th class="sx in">入り</th><th class="sx out">終わり</th><th class="sx hr">時間</th>`;
+    h += `<h3>人件費 <span class="hint">入り・終わりを打つ（17.5＝17時半、25＝翌1）か、右の帯をドラッグで塗る。Enter で下へ、Tab で右へ。深夜（${tg.nightFrom}時〜）は濃い緑</span></h3><div class="sswrap"><table class="ss" data-grid="staff"><thead><tr><th class="sx no">No</th><th class="sx in">入り</th><th class="sx out">終わり</th><th class="sx hr">時間</th>`;
     for (let i = 0; i < TSLOTS; i += 2) h += `<th class="hh" colspan="2">${T0 + i / 2}</th>`; h += '</tr></thead><tbody>';
     p.staff.forEach((row, r) => { const [a, b] = sRange(row); const hrs = row.filter(Boolean).length / 2; const pa = pend('s' + r + 's'), pb = pend('s' + r + 'e');
       h += `<tr><td class="sx no">${r + 1}</td><td class="sx in"><input class="ssi" inputmode="decimal" data-g="s" data-r="${r}" data-c="s" value="${pa ?? a}"></td><td class="sx out"><input class="ssi" inputmode="decimal" data-g="s" data-r="${r}" data-c="e" value="${pb ?? b}"></td><td class="sx hr">${hrs ? hrs : ''}</td>`;
@@ -3288,7 +3288,7 @@ function renderTargets() {
     const commit = inp => { const g = inp.dataset.g, r = +inp.dataset.r, cc = inp.dataset.c; const tr = inp.closest('tr'); const [si, ei] = tr.querySelectorAll('input.ssi'); const raw = inp.value.trim();
       let sv, ev; const both = raw.replace(/[〜~ー]/g, '-').match(/^(.+?)\s*-\s*(.+)$/);
       if (both && cc === 's') { sv = parseT(both[1], g === 't'); ev = parseT(both[2], g === 't'); } else { sv = parseT(si.value, g === 't'); ev = parseT(ei.value, g === 't'); }
-      if (Number.isNaN(sv) || Number.isNaN(ev)) { toast('時刻は数字で（17.5＝17時半、25＝翌1時）', true); return false; }
+      if (Number.isNaN(sv) || Number.isNaN(ev)) { toast('時刻は数字で（17.5＝17時半、25＝翌1）', true); return false; }
       const lo = T0, hi = g === 's' ? T0 + TSLOTS / 2 : T0 + THOURS;
       if ((sv !== '' && (sv < lo || sv >= hi)) || (ev !== '' && (ev <= lo || ev > hi))) { toast(`${lo}〜${hi} の間で入れてください`, true); return false; }
       if (sv !== '' && ev !== '' && ev <= sv) { toast('終わりは入りより後にしてください', true); return false; }
@@ -3357,7 +3357,7 @@ function renderForm() {
       : `<div class="row wrap"><span class="chips" id="fDays">${['月', '火', '水', '木', '金', '土', '日'].map((w, i) => `<button type="button" class="chip" data-dow="${(i + 1) % 7}">${w}</button>`).join('')}<button type="button" class="chip" data-grp="wd">平日</button><button type="button" class="chip" data-grp="we">土日祝</button><button type="button" class="chip" data-grp="all">全部</button></span></div>
       <div class="row"><select id="fBulkT">${presets.map(p => `<option>${p}</option>`).join('')}<option value="休">休</option></select><button class="btn small primary" id="fBulk">選んだ曜日に入れる</button></div>`}
       <div class="row wrap"><button class="btn small" id="fPat" ${pat ? '' : 'disabled'} title="${pat ? '' : 'まだ保存されていません'}">いつものパターンで埋める</button><button class="btn small" id="fPatSave">今の内容をいつものパターンに保存</button><button class="btn small" id="fPrev" ${prevWish ? '' : 'disabled'}>前回（${prevWish ? esc(lbl(prevWish)) : 'なし'}）と同じ</button><button class="btn small" id="fClear">全部消す</button></div></div>`;
-    h += `<div class="card"><div class="note">出られる時間を30分単位で。表記はシフト表と同じ（17.5 = 17:30、25 = 翌1時、31 = 翌7時）。出られない日は「休」。${sh.deadline ? ` <b>締切 ${sh.deadline.replace(/-/g, '/')}</b>` : ''}</div><table class="ftable ${formState.mode === 'off' ? 'offmode' : ''}"><thead><tr><th>日付</th><th>開始</th><th>終了</th><th></th><th></th></tr></thead><tbody>`;
+    h += `<div class="card"><div class="note">出られる時間を30分単位で。表記はシフト表と同じ（17.5＝17時半、25＝翌1、31＝翌7）。出られない日は「休」。${sh.deadline ? ` <b>締切 ${sh.deadline.replace(/-/g, '/')}</b>` : ''}</div><table class="ftable ${formState.mode === 'off' ? 'offmode' : ''}"><thead><tr><th>日付</th><th>開始</th><th>終了</th><th></th><th></th></tr></thead><tbody>`;
     for (let i = 0; i < sh.days; i++) { const d = dateOf(sh, i); const c = sh.cells[st.id + '|' + i]; const off = c && c.off;
       h += `<tr class="${isOff(d) ? 'we' : ''}" data-day="${i}"><td class="dt">${md(d)} (${wd(d)})</td><td><input type="text" inputmode="decimal" id="fs-${i}" data-f="s" value="${c && !off ? fmtT(c.s) : ''}" class="${c && c.s != null ? 'has' : ''}" placeholder="17.5"></td><td><input type="text" inputmode="decimal" id="fe-${i}" data-f="e" value="${c && !off ? fmtT(c.e) : ''}" class="${c && c.e != null ? 'has' : ''}" placeholder="30.5"></td><td class="off"><button type="button" data-off="${i}" class="${off ? 'on' : ''}" title="出られない日">休</button></td><td class="pre"><select data-pre="${i}" aria-label="よく使う時間">${presetOpts}</select></td></tr>`; }
     h += `</tbody></table></div>
@@ -3930,7 +3930,7 @@ function renderSettings() {
   body.innerHTML = `<div class="hint"><b>${esc(storeName())}</b>の設定</div>
   <h4 class="setsec">人件費</h4>
   <div class="row"><label>遅時給に切り替わる時刻<input type="number" id="setLate" step="0.5" min="${OPEN}" max="${CLOSE}" value="${s.lateFrom}"></label><label>半月の人件費予算（円、0で無効）<input type="number" id="setBudget" step="1000" value="${s.budget || 0}"></label></div>
-  <div class="hint">時刻は表と同じ表記（22 = 22時、25 = 翌1時、31 = 翌7時）。実績の人件費はスタッフごとの早時給/遅時給で計算します。</div>
+  <div class="hint">時刻は表と同じ表記（22＝22時、25＝翌1、31＝翌7）。実績の人件費はスタッフごとの早時給/遅時給で計算します。</div>
   <h4 class="setsec">表示時間 <button type="button" class="lgq" aria-label="時刻の書き方" onclick="event.preventDefault();toast('24より大きい数は翌日の時刻です（25＝翌1時、32＝翌8時）')">?</button></h4>
   <div class="row"><label>ガント表示 開始時刻<input type="number" id="setViewFrom" step="1" min="${OPEN}" max="${CLOSE - 1}" value="${s.viewFrom ?? OPEN}"></label><label>ガント表示 終了時刻<input type="number" id="setViewTo" step="1" min="${OPEN + 1}" max="${CLOSE}" value="${s.viewTo ?? CLOSE}"></label></div>
   <div class="vrbox" id="vrBox"><b>曜日ごとのガント表示時間 <button type="button" class="lgq" aria-label="曜日ごとの説明" onclick="event.preventDefault();toast('曜日を付けたパターンがその曜日の帯（ガント）に使われます。曜日のない日は上の「開始・終了」です')">?</button></b>${vrHtml()}</div>
