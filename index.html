@@ -1824,7 +1824,15 @@ h4.setsec{margin:18px 0 6px;font-size:14px;font-weight:700;color:#1d2939;border-
 
 /* スマホで軽く 2026-11-07: いつも出ている部分（上のバー・下のタブ・カード）のすりガラス（背景ぼかし）をやめて、ほぼ不透明の白に。スクロール中の再計算が重いため。一時的に出る窓（メニュー・ドロワー・トースト）はそのまま */
 @media (hover:none) and (pointer:coarse){.top,.tabs,.banner,.banner.off,.banner.ro,.screen .card,.kbar,.celltip,.connpop{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}.top,.tabs,.screen .card,.kbar{background:rgba(255,255,255,.97)!important}.banner{background:rgba(255,255,255,.97)}}
-.ntrow{display:grid;gap:4px;margin:6px 0 10px}.ntrow .ntck{display:flex;align-items:center;gap:6px;font-weight:600}.ntrow input[type=text]{width:100%;box-sizing:border-box}.ntrow .ntd{display:flex;align-items:center;gap:6px;font-size:13px}.ntrow .ntd input{width:56px}.drawer .ntrow label.ntck,.drawer .ntrow label.ntd{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;text-align:left!important;gap:8px;margin:0}.drawer .ntrow label.ntck input{width:20px!important;height:20px;margin:0;flex:none}.drawer .ntrow label.ntd input{width:64px!important;flex:none;text-align:center}.drawer .ntrow{border-top:1px solid rgba(0,0,0,.06);padding-top:10px}</style>
+.ntrow0{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;margin:4px 0 12px}.ntrow0 label{display:flex;align-items:center;gap:8px;font-weight:600}.ntrow0 select{font:inherit;padding:6px 8px;border-radius:8px;border:1px solid #d6dce5;background:#fff}
+.ntcard{border:1px solid #e3e6ea;border-radius:14px;padding:12px 14px;margin:0 0 12px;background:#fff;display:grid;gap:8px}.ntcard.off{opacity:.55;background:#fafafa}
+.nthead{display:flex;align-items:center;gap:10px}.nthead b{font-size:15px}
+.ntsw{position:relative;width:44px;height:26px;flex:none}.ntsw input{opacity:0;width:0;height:0;position:absolute}.ntsl{position:absolute;inset:0;background:#c7ccd4;border-radius:13px;transition:.15s}.ntsl::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:.15s}.ntsw input:checked+.ntsl{background:#34c759}.ntsw input:checked+.ntsl::after{transform:translateX(18px)}
+.ntmeta{display:grid;grid-template-columns:1fr;gap:4px;font-size:13.5px}.ntmeta>div{display:flex;align-items:center;gap:8px}.ntmeta select{font:inherit;padding:4px 8px;border-radius:8px;border:1px solid #d6dce5;background:#fff}
+.ntk{display:inline-block;min-width:3.2em;font-size:12px;font-weight:700;color:#6e6e73;letter-spacing:.04em}.ntk small{font-weight:500;margin-left:6px}
+.ntcard input[type=text]{width:100%;box-sizing:border-box;font:inherit;padding:8px 10px;border-radius:10px;border:1px solid #d6dce5;background:#fff}
+.ntprev{display:grid;gap:4px}.ntpl{font-size:11px;color:#8e8e93;font-weight:600}.ntbub{background:#f2f2f7;border-radius:12px;padding:8px 12px;font-size:13.5px;line-height:1.45;display:grid;gap:2px;border-left:4px solid #0a84ff}.ntbub b{font-size:12px;color:#1c1c1e}
+</style>
 
 <div class="top" id="topbar">
   <div class="brand"><select id="storeSel" title="店舗" aria-label="店舗を選ぶ"></select></div>
@@ -3979,7 +3987,7 @@ function renderSettings() {
       row.querySelectorAll('.chip[data-dow]').forEach(b => b.onclick = () => { const d = +b.dataset.dow; const on = !vrs[i].days[d]; if (on) vrs.forEach(q => { q.days[d] = false; }); vrs[i].days[d] = on; redraw(); });
       row.querySelector('[data-vrdel]').onclick = () => { vrs.splice(i, 1); redraw(); }; });
     $('#vrAdd').onclick = () => { vrs.push({ from: +$('#setViewFrom').value || OPEN, to: +$('#setViewTo').value || VIEW_END, days: [false, false, false, false, false, false, false] }); redraw(); }; };
-  wireVr();
+  wireVr(); try { wireNotify(); } catch (e) {}
   $('#setSave').onclick = () => { const s = settingsOf(); /* 保存の瞬間の config に書く */ s.viewFrom = +$('#setViewFrom').value || OPEN; s.viewTo = +$('#setViewTo').value || VIEW_END; s.viewRanges = vrs.map(p => { let a = Math.max(OPEN, Math.min(CLOSE - 1, Math.floor(+p.from || OPEN))), b = Math.ceil(+p.to || VIEW_END); b = Math.max(a + 1, Math.min(CLOSE, b)); return { from: a, to: b, days: p.days.map(Boolean) }; }); s.lateFrom = +$('#setLate').value || 22; s.budget = +$('#setBudget').value || 0; s.breakOver = 0; s.breakMin = 0 || 0; s.maxConsec = +$('#setConsec').value || 0; s.minRest = +$('#setRest').value || 0; s.portalUrl = $('#setPortal').value.trim(); s.extraHolidays = $('#setHol').value.trim(); s.notify = readNotify(); store.saveConfig(config).then(() => { toast('保存しました'); render(); }); };
   $('#setDelSheet').onclick = e => { if (!cur) return; const sh = sheets[cur]; popover(e.currentTarget, `<b>${esc(lbl(sh))} ${sh.phase === 'wish' ? '希望' : '確定'} を削除しますか？</b><div class="hint">${Object.keys(sh.cells).length}コマの入力が消えます。元に戻せません。</div><div class="row"><button class="btn small danger" id="delYes">削除する</button></div>`, pop => { $('#delYes', pop).onclick = async () => { await store.deleteSheet(cur); cur = null; pop.remove(); openDrawer(''); render(); toast('削除しました'); }; }); };
   body.querySelectorAll('[data-sn]').forEach(inp => inp.onchange = () => { const list = stores.map(x => ({ ...x })); list[+inp.dataset.sn].name = inp.value.trim() || list[+inp.dataset.sn].name; store.saveStores(list).then(() => { toast('店舗名を保存'); renderStoreSel(); }); });
@@ -3990,10 +3998,31 @@ function renderSettings() {
 /* スタッフへのアプリ通知の文面・タイミング（サーバーの PUSH_DEFAULTS_ と同じ初期値）2026-11-07 */
 const NOTIFY_DEF = { open: { on: true, text: '{期間}の希望を受付中（締切 {締切}）' }, fixed: { on: true, text: '{期間}のシフトが出ました' }, remind: { on: true, text: '{期間}の希望の締切は{締切}です', days: 1 }, hour: 10 };
 function notifyOf(s) { const n = s.notify || {}; return { open: { ...NOTIFY_DEF.open, ...(n.open || {}) }, fixed: { ...NOTIFY_DEF.fixed, ...(n.fixed || {}) }, remind: { ...NOTIFY_DEF.remind, ...(n.remind || {}) }, hour: n.hour != null && n.hour !== '' ? +n.hour : NOTIFY_DEF.hour }; }
-function notifyHtml(s) { const n = notifyOf(s); const row = (k, label, extra) => `<div class="ntrow"><label class="ntck"><input type="checkbox" id="nt_${k}_on" ${n[k].on ? 'checked' : ''}>${label}</label>${extra || ''}<input type="text" id="nt_${k}_t" value="${esc(n[k].text)}" maxlength="80"></div>`;
-  return `<h4 class="setsec" id="ntSec">スタッフへの通知 <button type="button" class="lgq" aria-label="通知の説明" onclick="event.preventDefault();toast('「通知を受け取る」をオンにしたスタッフのスマホに届きます。文中の {期間} {締切} は自動で入ります。確定は「公開」した時にすぐ送ります', 6000)">?</button></h4>
-  <div class="row"><label>受付開始・締切前を送る時刻<input type="number" id="nt_hour" min="0" max="23" step="1" value="${n.hour}"></label></div>
-  ${row('open', '希望の受付開始')}${row('remind', '締切の前', `<label class="ntd"><input type="number" id="nt_remind_d" min="0" max="7" step="1" value="${+n.remind.days || 0}">日前（まだ出していない人だけ）</label>`)}${row('fixed', 'シフトの確定（公開した時）')}`; }
+function notifyHtml(s) { const n = notifyOf(s); const h = String(n.hour).padStart(2, "0") + ":00";
+  /* 例の文: 今開いている期間の名前と締切で置き換えて見せる */
+  const sh = cur ? sheets[cur] : null; const wsh = sh ? wishSheetOf(sh) : null; const lab = sh ? lbl(sh) : "12月前半"; const dl = wsh && wsh.deadline ? wsh.deadline : ""; const dlTxt = dl ? (() => { const d = new Date(dl + "T00:00:00"); return (d.getMonth() + 1) + "/" + d.getDate() + "(" + WD[d.getDay()] + ")"; })() : "11/20(木)";
+  const ex = t => esc(String(t || "").replace(/\{期間\}/g, lab).replace(/\{締切\}/g, dlTxt));
+  const card = (key, title, when, who, extra) => `<div class="ntcard ${n[key].on ? "" : "off"}" data-nt="${key}">
+    <div class="nthead"><label class="ntsw"><input type="checkbox" id="nt_${key}_on" ${n[key].on ? "checked" : ""}><span class="ntsl"></span></label><b>${title}</b></div>
+    <div class="ntmeta"><div><span class="ntk">いつ</span><span id="nt_${key}_when">${when}</span></div><div><span class="ntk">誰に</span><span>${who}</span></div></div>
+    ${extra || ""}
+    <div class="ntk">文面 <small>{期間}{締切} は自動で入ります</small></div>
+    <input type="text" id="nt_${key}_t" value="${esc(n[key].text)}" maxlength="80">
+    <div class="ntprev"><span class="ntpl">プレビュー</span><div class="ntbub"><b>casa${esc(storeName())}</b><span id="nt_${key}_pv">${ex(n[key].text)}</span></div></div>
+  </div>`;
+  return `<h4 class="setsec" id="ntSec">スタッフへの通知 <button type="button" class="lgq" aria-label="通知の説明" onclick="event.preventDefault();toast('「通知を受け取る」をオンにしたスタッフのスマホに届きます。同じ期間・同じ種類は1回だけ送ります', 5000)">?</button></h4>
+  <div class="ntrow0"><label>送る時刻（受付開始・締切前）<select id="nt_hour">${Array.from({ length: 24 }, (_, x) => `<option value="${x}" ${x === n.hour ? "selected" : ""}>${String(x).padStart(2, "0")}:00</option>`).join("")}</select></label><span class="hint">15分おきに見回るので、実際は ${h}〜${String(n.hour).padStart(2, "0")}:15 ごろに届きます</span></div>
+  ${card("open", "希望の受付開始", "受付開始日の " + h, "通知オンの全員")}
+  ${card("remind", "締切の前", "締切の <b id=\"nt_remind_dtxt\">" + (+n.remind.days || 0) + "</b> 日前の " + h, "<b>まだ希望を出していない人だけ</b>", `<div class="ntmeta"><div><span class="ntk">何日前</span><select id="nt_remind_d">${[0,1,2,3,4,5,6,7].map(x => `<option value="${x}" ${x === (+n.remind.days || 0) ? "selected" : ""}>${x === 0 ? "締切の当日" : x + "日前"}</option>`).join("")}</select></div></div>`)}
+  ${card("fixed", "シフトの確定", "「公開する」を押した直後", "通知オンの全員")}`; }
+function wireNotify() { /* カードの見た目とプレビューを操作に合わせて更新 */
+  const sh = cur ? sheets[cur] : null; const wsh = sh ? wishSheetOf(sh) : null; const lab = sh ? lbl(sh) : "12月前半"; const dl = wsh && wsh.deadline ? wsh.deadline : ""; const dlTxt = dl ? (() => { const d = new Date(dl + "T00:00:00"); return (d.getMonth() + 1) + "/" + d.getDate() + "(" + WD[d.getDay()] + ")"; })() : "11/20(木)";
+  const hh = () => String(+($("#nt_hour")?.value || 0)).padStart(2, "0") + ":00";
+  ["open", "remind", "fixed"].forEach(k => { const on = $("#nt_" + k + "_on"), t = $("#nt_" + k + "_t"), pv = $("#nt_" + k + "_pv"), cd = document.querySelector(`.ntcard[data-nt="${k}"]`); if (!on || !t) return;
+    on.onchange = () => cd.classList.toggle("off", !on.checked);
+    t.oninput = () => { if (pv) pv.textContent = (t.value || NOTIFY_DEF[k].text).replace(/\{期間\}/g, lab).replace(/\{締切\}/g, dlTxt); }; });
+  const hr = $("#nt_hour"); if (hr) hr.onchange = () => { const w1 = $("#nt_open_when"), w2 = $("#nt_remind_when"); if (w1) w1.textContent = "受付開始日の " + hh(); if (w2) w2.innerHTML = "締切の <b id=\"nt_remind_dtxt\">" + (+($("#nt_remind_d")?.value || 0)) + "</b> 日前の " + hh(); };
+  const dd = $("#nt_remind_d"); if (dd) dd.onchange = () => { const b = $("#nt_remind_dtxt"); if (b) b.textContent = dd.value; }; }
 function readNotify() { const v = id => document.getElementById(id); const t = (k) => ({ on: !!v('nt_' + k + '_on')?.checked, text: (v('nt_' + k + '_t')?.value || '').trim() || NOTIFY_DEF[k].text });
   return { hour: Math.max(0, Math.min(23, Math.round(+v('nt_hour')?.value || 0))), open: t('open'), fixed: t('fixed'), remind: { ...t('remind'), days: Math.max(0, Math.min(7, Math.round(+v('nt_remind_d')?.value || 0))) } }; }
 // ---------- boot ----------
