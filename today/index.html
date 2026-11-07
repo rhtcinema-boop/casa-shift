@@ -23,9 +23,8 @@ main{padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 24px);display:grid
 .nm{font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:6px}.nm small{display:block;font-size:10px;font-weight:600;color:var(--sub)}
 .tl{position:relative;height:28px}
 .gl{position:absolute;top:0;bottom:0;width:0;border-left:.5px dashed #e5e5ea}
-.bar{position:absolute;top:4px;height:20px;border-radius:7px;background:var(--bar);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;padding:0 6px;white-space:nowrap;overflow:visible}
+.bar{position:absolute;top:4px;height:20px;border-radius:7px;background:var(--bar);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px;white-space:nowrap;overflow:hidden;box-sizing:border-box}.bar.s{font-size:9.5px;padding:0 3px;letter-spacing:-.02em}.bar.xs{font-size:8.5px;padding:0 2px;letter-spacing:-.04em}.bar.hide .t,.bar.hide .tag{visibility:hidden}.bar.hide::after{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px 0 0 -2px;border-radius:50%;background:rgba(255,255,255,.9)}.tip{position:fixed;z-index:9;background:#1c1c1e;color:#fff;font-size:13px;font-weight:700;padding:6px 10px;border-radius:8px;transform:translate(-50%,-120%);pointer-events:none;white-space:nowrap} /* 帯からはみ出さない: 幅に応じて文字を小さくする（2026-11-07） */
 .bar.emp{background:#5b8def}.bar .t{text-shadow:0 1px 1px rgba(0,0,0,.15)}
-.bar.out .t{position:absolute;left:100%;margin-left:4px;color:var(--fg);text-shadow:none}
 .bar .tag{margin-left:4px;font-size:10px;background:rgba(255,255,255,.3);border-radius:4px;padding:0 3px}
 .empty{color:var(--sub);font-size:14px;padding:6px 0 8px}
 .now{position:absolute;top:0;bottom:0;width:2px;background:#ff3b30;border-radius:1px;z-index:0;opacity:.85}.bar{z-index:1}
@@ -72,9 +71,12 @@ main{padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 24px);display:grid
       return `<section class="st"><div class="sh"><b>${esc(st.name)}</b><span class="n">${rows.length}人</span>${chip}</div>
         <div class="axis"><span></span><div class="sc">${ticks.map(h => `<span style="left:${X(h)}">${h >= 24 ? h - 24 : h}</span>`).join('')}</div></div>
         ${rows.map(r => { const w = (r.c.e - r.c.s) / span; const tags = (r.c.ld ? '<span class="tag">責</span>' : '') + ((r.c.cl != null ? r.c.cl : r.c.e >= 31) ? '<span class="tag">締</span>' : '');
-          return `<div class="row"><div class="nm">${esc(r.p.name)}${r.p.role ? `<small>${esc(r.p.role)}</small>` : ''}</div><div class="tl">${grid}<div class="bar${r.p.group === '社員' ? ' emp' : ''}${w < .3 ? ' out' : ''}" style="left:${X(r.c.s)};width:${(w * 100).toFixed(2)}%"><span class="t">${clk(r.c.s)}〜${clk(r.c.e)}</span>${w >= .3 ? tags : ''}</div></div></div>`; }).join('')}</section>`;
+          return `<div class="row"><div class="nm">${esc(r.p.name)}${r.p.role ? `<small>${esc(r.p.role)}</small>` : ''}</div><div class="tl">${grid}<div class="bar${r.p.group === '社員' ? ' emp' : ''}${w < .14 ? ' xs' : w < .22 ? ' s' : ''}" style="left:${X(r.c.s)};width:${(w * 100).toFixed(2)}%"><span class="t">${clk(r.c.s)}〜${clk(r.c.e)}</span>${w >= .26 ? tags : ''}</div></div></div>`; }).join('')}</section>`;
     }).join('') + '<div class="foot">青＝社員・緑＝アルバイト　「責」責任者　「締」締め</div>';
+    fitBars();
   }
+  function fitBars() { main.querySelectorAll('.bar').forEach(b => { const t = b.querySelector('.t'); if (!t) return; b.classList.remove('hide'); const over = () => b.scrollWidth > b.clientWidth + 1; if (!over()) return; if (!b.classList.contains('s') && !b.classList.contains('xs')) { b.classList.add('s'); if (!over()) return; } if (!b.classList.contains('xs')) { b.classList.remove('s'); b.classList.add('xs'); if (!over()) return; } b.classList.add('hide'); b.dataset.tip = t.textContent; }); } /* 幅に入らない時は文字を隠し、押した時に出す（2026-11-07 はみ出し対策） */
+  main.addEventListener('click', e => { const b = e.target.closest('.bar.hide'); document.querySelectorAll('.tip').forEach(x => x.remove()); if (!b) return; const r = b.getBoundingClientRect(); const d = document.createElement('div'); d.className = 'tip'; d.textContent = b.dataset.tip; d.style.left = (r.left + r.width / 2) + 'px'; d.style.top = r.top + 'px'; document.body.appendChild(d); setTimeout(() => d.remove(), 2500); });
   const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
   const move = n => { day = new Date(day); day.setDate(day.getDate() + n); render(); };
   $('#prev').onclick = () => move(-1); $('#next').onclick = () => move(1); $('#today').onclick = () => { day = bizToday(); render(); };
