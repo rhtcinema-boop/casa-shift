@@ -14,21 +14,23 @@ header{position:sticky;top:0;z-index:5;background:rgba(242,242,247,.96);padding:
 .tb{border:0;background:var(--acc);color:#fff;border-radius:12px;height:40px;padding:0 14px;font:inherit;font-weight:700}
 .tb[hidden]{display:none}
 main{padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 24px);display:grid;gap:14px;max-width:760px;margin:0 auto}
-.st{background:var(--card);border-radius:18px;padding:14px 14px 10px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
-.sh{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}.sh b{font-size:18px}.sh .n{color:var(--sub);font-size:13px;font-weight:600}
+.st{background:var(--card);border-radius:18px;padding:14px 12px 8px;box-shadow:0 1px 3px rgba(0,0,0,.05);overflow:hidden}
+.sh{display:flex;align-items:baseline;gap:8px;margin-bottom:6px;padding-left:4px}.sh b{font-size:18px}.sh .n{color:var(--sub);font-size:13px;font-weight:600}
 .chip{font-size:11px;font-weight:700;border-radius:6px;padding:2px 6px;background:#fff4e5;color:#b45309}
-.axis,.row{display:grid;grid-template-columns:84px 1fr;align-items:center}
-.axis{font-size:10px;color:var(--sub);height:16px}.axis .sc{position:relative;height:16px}.axis .sc span{position:absolute;transform:translateX(-50%);top:0}
-.row{min-height:36px;border-top:.5px solid var(--line)}
-.nm{font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:6px}.nm small{display:block;font-size:10px;font-weight:600;color:var(--sub)}
-.tl{position:relative;height:28px}
+.g{display:grid;grid-template-columns:var(--nw,76px) var(--tw,78px) 1fr;align-items:center;column-gap:4px}
+.hd{height:18px}.hd .sc{position:relative;height:18px;font-size:10px;color:var(--sub);font-weight:600}.hd .sc span{position:absolute;transform:translateX(-50%);top:1px}
+.cnt{height:22px;margin-bottom:4px}.cnt .lb{font-size:11px;color:var(--sub);font-weight:600;padding-left:4px}.cnt .sc{position:relative;height:22px;display:flex;gap:1px}.cnt .sc i{flex:1;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#fff;background:#eceff1;border-radius:2px;font-style:normal;letter-spacing:-.03em}.cnt .sc i.c0{color:transparent}
+.row{min-height:38px;border-top:.5px solid var(--line)}.row:nth-child(even){background:#fafafa}
+.nm{font-weight:800;font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-left:8px;border-left:4px solid #bcd3f5;line-height:1.1}.nm.emp{border-left-color:#5b8def}
+.tm{font-size:14px;font-weight:600;color:#333;white-space:nowrap;font-variant-numeric:tabular-nums}
+.tl{position:relative;height:30px}
 .gl{position:absolute;top:0;bottom:0;width:0;border-left:.5px dashed #e5e5ea}
-.bar{position:absolute;top:4px;height:20px;border-radius:7px;background:var(--bar);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;padding:0 5px;white-space:nowrap;overflow:hidden;box-sizing:border-box}.bar.s{font-size:9.5px;padding:0 3px;letter-spacing:-.02em}.bar.xs{font-size:8.5px;padding:0 2px;letter-spacing:-.04em}.bar.hide .t,.bar.hide .tag{visibility:hidden}.bar.hide::after{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px 0 0 -2px;border-radius:50%;background:rgba(255,255,255,.9)}.tip{position:fixed;z-index:9;background:#1c1c1e;color:#fff;font-size:13px;font-weight:700;padding:6px 10px;border-radius:8px;transform:translate(-50%,-120%);pointer-events:none;white-space:nowrap} /* 帯からはみ出さない: 幅に応じて文字を小さくする（2026-11-07） */
-.bar.emp{background:#5b8def}.bar .t{text-shadow:0 1px 1px rgba(0,0,0,.15)}
-.bar .tag{margin-left:4px;font-size:10px;background:rgba(255,255,255,.3);border-radius:4px;padding:0 3px}
-.empty{color:var(--sub);font-size:14px;padding:6px 0 8px}
-.now{position:absolute;top:0;bottom:0;width:2px;background:#ff3b30;border-radius:1px;z-index:0;opacity:.85}.bar{z-index:1}
-.foot{text-align:center;color:var(--sub);font-size:12px}
+.bar{position:absolute;top:3px;height:24px;border-radius:3px;background:#7dc389;border:1px solid #5fae6e;color:#133;font-size:11px;font-weight:700;display:flex;align-items:center;padding:0 6px;white-space:nowrap;overflow:hidden;box-sizing:border-box;z-index:1}.bar.emp{background:#86b7ef;border-color:#5b95dd}.bar.s{font-size:9.5px;padding:0 3px;letter-spacing:-.02em}.bar.xs{font-size:8.5px;padding:0 2px;letter-spacing:-.04em}.bar.hide .t{visibility:hidden}.bar.hide::after{content:"";position:absolute;left:50%;top:50%;width:4px;height:4px;margin:-2px 0 0 -2px;border-radius:50%;background:#133}
+.tip{position:fixed;z-index:9;background:#1c1c1e;color:#fff;font-size:13px;font-weight:700;padding:6px 10px;border-radius:8px;transform:translate(-50%,-120%);pointer-events:none;white-space:nowrap}
+.now{position:absolute;top:0;bottom:0;width:2px;background:#ff3b30;border-radius:1px;z-index:0;opacity:.85}
+.empty{color:var(--sub);font-size:14px;padding:6px 4px 8px}
+.foot{text-align:right;color:var(--sub);font-size:11px;padding-right:4px}
+@media (max-width:420px){.g{--nw:58px;--tw:70px}.nm{font-size:14px}.tm{font-size:12px}.cnt .sc i{font-size:8px}}
 .err{background:#fff1f0;color:#b42318;border-radius:12px;padding:12px;font-size:14px}
 </style></head><body>
 <header><div class="nav"><button class="nb" id="prev" aria-label="前の日">‹</button><h1 id="ttl">今日のシフト<small id="sub">読み込み中…</small></h1><button class="tb" id="today" hidden>今日</button><button class="nb" id="next" aria-label="次の日">›</button></div></header>
@@ -65,14 +67,22 @@ main{padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 24px);display:grid
       rows.sort((a, b) => a.c.s - b.c.s || a.c.e - b.c.e);
       const chip = hit.s.phase === 'fixed' ? (hit.s.published ? '' : '<span class="chip">未公開</span>') : '<span class="chip">作成中</span>';
       if (!rows.length) return `<section class="st"><div class="sh"><b>${esc(st.name)}</b>${chip}</div><div class="empty">この日の出勤はありません</div></section>`;
-      let a = Math.floor(Math.min(...rows.map(r => r.c.s))), b = Math.ceil(Math.max(...rows.map(r => r.c.e))); if (b - a < 6) b = a + 6; const span = b - a; const X = h => ((h - a) / span * 100).toFixed(2) + '%';
-      const ticks = []; for (let h = a; h <= b; h += span > 12 ? 3 : 2) ticks.push(h);
-      const grid = ticks.map(h => `<i class="gl" style="left:${X(h)}"></i>`).join('') + (isT && nowH > a && nowH < b ? `<i class="now" style="left:${X(nowH)}"></i>` : '');
+      /* 表示の時間帯: 店の設定（ガント表示 開始・終了）を使い、シフトがはみ出す時だけ広げる */
+      /* 表示の時間帯: その日のシフトの範囲＋前後1時間（最低8時間幅）。狭い画面でも潰れないように */
+      let a = Math.floor(Math.min(...rows.map(r => r.c.s))) - 1, b = Math.ceil(Math.max(...rows.map(r => r.c.e))) + 1; if (b - a < 8) b = a + 8; const span = b - a; const X = h => ((h - a) / span * 100).toFixed(2) + '%';
+      const step = span > 20 ? 3 : span > 12 ? 2 : 1; const hours = []; for (let h = a; h <= b; h++) hours.push(h); const labels = hours.filter(h => (h - a) % step === 0);
+      const grid = hours.map(h => `<i class="gl" style="left:${X(h)}"></i>`).join('') + (isT && nowH > a && nowH < b ? `<i class="now" style="left:${X(nowH)}"></i>` : '');
+      /* 人数: 30分ごとに何人いるか（多いほど濃い緑） */
+      const slots = []; for (let t = a; t < b; t += .5) slots.push(rows.filter(r => r.c.s <= t && t < r.c.e).length); const mx = Math.max(1, ...slots);
+      const col = n => { if (!n) return '#eceff1'; const g = [[197,230,197],[141,201,147],[77,164,89],[36,120,52]]; const i = Math.min(3, Math.floor(n / mx * 3.999)); return 'rgb(' + g[i].join(',') + ')'; };
+      const cnt = slots.map(n => `<i class="${n ? '' : 'c0'}" style="background:${col(n)}">${n}</i>`).join('');
+      const num = h => Number.isInteger(h) ? String(h) : h.toFixed(1);
       return `<section class="st"><div class="sh"><b>${esc(st.name)}</b><span class="n">${rows.length}人</span>${chip}</div>
-        <div class="axis"><span></span><div class="sc">${ticks.map(h => `<span style="left:${X(h)}">${h >= 24 ? h - 24 : h}</span>`).join('')}</div></div>
-        ${rows.map(r => { const w = (r.c.e - r.c.s) / span; const tags = (r.c.ld ? '<span class="tag">責</span>' : '') + ((r.c.cl != null ? r.c.cl : r.c.e >= 31) ? '<span class="tag">締</span>' : '');
-          return `<div class="row"><div class="nm">${esc(r.p.name)}${r.p.role ? `<small>${esc(r.p.role)}</small>` : ''}</div><div class="tl">${grid}<div class="bar${r.p.group === '社員' ? ' emp' : ''}${w < .14 ? ' xs' : w < .22 ? ' s' : ''}" style="left:${X(r.c.s)};width:${(w * 100).toFixed(2)}%"><span class="t">${clk(r.c.s)}〜${clk(r.c.e)}</span>${w >= .26 ? tags : ''}</div></div></div>`; }).join('')}</section>`;
-    }).join('') + '<div class="foot">青＝社員・緑＝アルバイト　「責」責任者　「締」締め</div>';
+        <div class="g hd"><span></span><span></span><div class="sc">${labels.map(h => `<span style="left:${X(h)}">${h}</span>`).join('')}</div></div>
+        <div class="g cnt"><span class="lb">人数</span><span></span><div class="sc">${cnt}</div></div>
+        ${rows.map(r => { const w = (r.c.e - r.c.s) / span; const emp = r.p.group === '社員';
+          return `<div class="g row"><div class="nm${emp ? ' emp' : ''}" title="${esc(r.p.name)}">${esc(r.p.name)}</div><div class="tm">${clk(r.c.s)}〜${clk(r.c.e)}</div><div class="tl">${grid}<div class="bar${emp ? ' emp' : ''}" style="left:${X(r.c.s)};width:${(w * 100).toFixed(2)}%"><span class="t">${num(r.c.s)}-${num(r.c.e)}</span></div></div></div>`; }).join('')}</section>`;
+    }).join('') + '<div class="foot">' + (day.getMonth() + 1) + '/' + day.getDate() + ' 作成 ・ casaシフト表</div>';
     fitBars();
   }
   function fitBars() { main.querySelectorAll('.bar').forEach(b => { const t = b.querySelector('.t'); if (!t) return; b.classList.remove('hide'); const over = () => b.scrollWidth > b.clientWidth + 1; if (!over()) return; if (!b.classList.contains('s') && !b.classList.contains('xs')) { b.classList.add('s'); if (!over()) return; } if (!b.classList.contains('xs')) { b.classList.remove('s'); b.classList.add('xs'); if (!over()) return; } b.classList.add('hide'); b.dataset.tip = t.textContent; }); } /* 幅に入らない時は文字を隠し、押した時に出す（2026-11-07 はみ出し対策） */
