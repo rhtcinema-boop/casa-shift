@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>今日のシフト</title>
+<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="今日のシフト"><meta name="theme-color" content="#f2f2f7">
+<link rel="apple-touch-icon" href="../today-icon-180.png"><link rel="icon" href="../today-icon-192.png"><link rel="manifest" href="manifest.webmanifest">
+<script>window.CASA_API_URL="https://script.google.com/macros/s/AKfycby8ocFc0ypPPbaquHSRa5iugFGpyvtltCOmKFi3ZvEkN6eWoC6d5OcL4jtvGSfMsBX-RQ/exec";window.CASA_FB={"apiKey":"AIzaSyDRmKgWhOVOBf9MRSzhKMHST83rOiNL9ds","authDomain":"casa-shift.firebaseapp.com","projectId":"casa-shift","storageBucket":"casa-shift.firebasestorage.app","messagingSenderId":"237014095241","appId":"1:237014095241:web:cefe69f3b89af561b9fd58","vapidKey":"BN-p0OWix9jA47TCd98Sm-mDXGJwzc-vApJwvVldnYVIYLtE_mu_QavEy7KuchcK1e2O6RHkVdxzJGjsvYGXLd0"};</script><style>
+:root{--bg:#f2f2f7;--card:#fff;--fg:#1c1c1e;--sub:#8e8e93;--line:#e5e5ea;--acc:#0f9d6b;--bar:#34c759;--bar2:#a7e3bf;color-scheme:light}
+*{box-sizing:border-box}html,body{margin:0;background:var(--bg);color:var(--fg);font:15px -apple-system,BlinkMacSystemFont,"Hiragino Sans",sans-serif;-webkit-text-size-adjust:100%}
+header{position:sticky;top:0;z-index:5;background:rgba(242,242,247,.96);padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px;border-bottom:.5px solid var(--line)}
+.nav{display:flex;align-items:center;gap:8px}
+.nav h1{flex:1;margin:0;font-size:22px;font-weight:800;letter-spacing:.01em}
+.nav h1 small{display:block;font-size:13px;font-weight:600;color:var(--sub);margin-top:2px}
+.nb{border:0;background:#fff;width:40px;height:40px;border-radius:12px;font-size:20px;color:var(--acc);box-shadow:0 1px 2px rgba(0,0,0,.06)}
+.tb{border:0;background:var(--acc);color:#fff;border-radius:12px;height:40px;padding:0 14px;font:inherit;font-weight:700}
+.tb[hidden]{display:none}
+main{padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 24px);display:grid;gap:14px;max-width:760px;margin:0 auto}
+.st{background:var(--card);border-radius:18px;padding:14px 14px 10px;box-shadow:0 1px 3px rgba(0,0,0,.05)}
+.sh{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}.sh b{font-size:18px}.sh .n{color:var(--sub);font-size:13px;font-weight:600}
+.chip{font-size:11px;font-weight:700;border-radius:6px;padding:2px 6px;background:#fff4e5;color:#b45309}
+.axis,.row{display:grid;grid-template-columns:84px 1fr;align-items:center}
+.axis{font-size:10px;color:var(--sub);height:16px}.axis .sc{position:relative;height:16px}.axis .sc span{position:absolute;transform:translateX(-50%);top:0}
+.row{min-height:36px;border-top:.5px solid var(--line)}
+.nm{font-weight:700;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding-right:6px}.nm small{display:block;font-size:10px;font-weight:600;color:var(--sub)}
+.tl{position:relative;height:28px}
+.gl{position:absolute;top:0;bottom:0;width:0;border-left:.5px dashed #e5e5ea}
+.bar{position:absolute;top:4px;height:20px;border-radius:7px;background:var(--bar);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;padding:0 6px;white-space:nowrap;overflow:visible}
+.bar.emp{background:#5b8def}.bar .t{text-shadow:0 1px 1px rgba(0,0,0,.15)}
+.bar.out .t{position:absolute;left:100%;margin-left:4px;color:var(--fg);text-shadow:none}
+.bar .tag{margin-left:4px;font-size:10px;background:rgba(255,255,255,.3);border-radius:4px;padding:0 3px}
+.empty{color:var(--sub);font-size:14px;padding:6px 0 8px}
+.now{position:absolute;top:0;bottom:0;width:2px;background:#ff3b30;border-radius:1px;z-index:0;opacity:.85}.bar{z-index:1}
+.foot{text-align:center;color:var(--sub);font-size:12px}
+.err{background:#fff1f0;color:#b42318;border-radius:12px;padding:12px;font-size:14px}
+</style></head><body>
+<header><div class="nav"><button class="nb" id="prev" aria-label="前の日">‹</button><h1 id="ttl">今日のシフト<small id="sub">読み込み中…</small></h1><button class="tb" id="today" hidden>今日</button><button class="nb" id="next" aria-label="次の日">›</button></div></header>
+<main id="main"></main>
+<script>
+(function () {
+  const API = window.CASA_API_URL, FB = window.CASA_FB; const $ = s => document.querySelector(s); const main = $('#main');
+  const WD = '日月火水木金土'; const pad = n => ('0' + n).slice(-2); const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  const bizToday = () => { const d = new Date(); if (d.getHours() < 7) d.setDate(d.getDate() - 1); return d; }; /* 朝7時までは前の日（夜通しの営業） */
+  let day = bizToday(); let data = null;
+  const clk = h => { const H = Math.floor(h), M = Math.round((h - H) * 60); return (H >= 24 ? '翌' + (H - 24) : H) + ':' + pad(M); };
+  const lsGet = k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }; const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+  async function fromFs() { const k = lsGet('casa-admin-fsk'); if (!/^[0-9a-f]{40,}$/.test(k) || !FB || typeof DecompressionStream === 'undefined') return null;
+    const res = await fetch('https://firestore.googleapis.com/v1/projects/' + FB.projectId + '/databases/(default)/documents/v/' + k + '/admin/snap?key=' + FB.apiKey); if (!res.ok) return null;
+    const j = await res.json(); const z = j.fields && j.fields.z && j.fields.z.stringValue; if (!z) return null; const bin = atob(z); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    return JSON.parse(await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text()); }
+  async function fromApi() { const r = await fetch(API, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ api: 'admin_load', args: [{}] }) }); const j = JSON.parse(await r.text()); if (j.__err || j.error) throw new Error(j.__err || j.error); if (j.ok && j.ok.fsk) lsSet('casa-admin-fsk', j.ok.fsk); return j.ok; }
+  function keep(d) { data = d; try { const slim = { rev: d.rev, docs: {} }; Object.keys(d.docs).forEach(p => { if (/^(config\/|sheets\/)/.test(p)) slim.docs[p] = d.docs[p]; }); lsSet('casa-today-cache', JSON.stringify(slim)); } catch (e) {} }
+  async function load() { let d = null; try { d = await fromFs(); } catch (e) {} if (!d) d = await fromApi(); if (!data || d.rev >= (data.rev || 0)) { keep(d); render(); } }
+  function stores() { const m = data.docs['config/main']; const list = (m && m.data && m.data.stores) || [{ id: 'ueno', name: '上野' }]; return list; }
+  function sheetFor(store, ds) { let best = null; Object.keys(data.docs).forEach(p => { if (p.indexOf('sheets/') !== 0) return; const s = data.docs[p].data; if (!s || (s.store || 'ueno') !== store || !s.start || !s.days) return; if (s.phase !== 'fixed' && s.phase !== 'draft') return;
+      const st = new Date(s.start + 'T00:00:00'); const i = Math.round((new Date(ds + 'T00:00:00') - st) / 864e5); if (i < 0 || i >= s.days) return;
+      const n = Object.keys(s.cells || {}).filter(k => k.endsWith('|' + i)).length; const score = (s.phase === 'fixed' ? 2 : 0) + (n ? 1 : 0); if (!best || score > best.score) best = { s, i, score }; }); return best; }
+  function render() {
+    if (!data) return; const ds = iso(day); const isT = ds === iso(bizToday());
+    $('#ttl').firstChild.nodeValue = isT ? '今日のシフト' : (day.getMonth() + 1) + '/' + day.getDate() + 'のシフト';
+    $('#sub').textContent = (day.getMonth() + 1) + '月' + day.getDate() + '日（' + WD[day.getDay()] + '）'; $('#today').hidden = isT;
+    const nowH = (() => { const n = new Date(); let h = n.getHours() + n.getMinutes() / 60; if (h < 7) h += 24; return h; })();
+    main.innerHTML = stores().map(st => {
+      const cfg = (data.docs['config/' + st.id] || {}).data || {}; const staff = {}; (cfg.staff || []).forEach(x => { staff[x.id] = x; });
+      const hit = sheetFor(st.id, ds);
+      if (!hit) return `<section class="st"><div class="sh"><b>${esc(st.name)}</b></div><div class="empty">この日のシフト表はまだありません</div></section>`;
+      const rows = []; Object.keys(hit.s.cells || {}).forEach(k => { const [sid, ii] = k.split('|'); if (+ii !== hit.i) return; const c = hit.s.cells[k]; if (!c || c.off || c.s == null || c.e == null) return; const p = staff[sid] || { name: '?' }; if (p.placeholder) return; rows.push({ p, c }); });
+      rows.sort((a, b) => a.c.s - b.c.s || a.c.e - b.c.e);
+      const chip = hit.s.phase === 'fixed' ? (hit.s.published ? '' : '<span class="chip">未公開</span>') : '<span class="chip">作成中</span>';
+      if (!rows.length) return `<section class="st"><div class="sh"><b>${esc(st.name)}</b>${chip}</div><div class="empty">この日の出勤はありません</div></section>`;
+      let a = Math.floor(Math.min(...rows.map(r => r.c.s))), b = Math.ceil(Math.max(...rows.map(r => r.c.e))); if (b - a < 6) b = a + 6; const span = b - a; const X = h => ((h - a) / span * 100).toFixed(2) + '%';
+      const ticks = []; for (let h = a; h <= b; h += span > 12 ? 3 : 2) ticks.push(h);
+      const grid = ticks.map(h => `<i class="gl" style="left:${X(h)}"></i>`).join('') + (isT && nowH > a && nowH < b ? `<i class="now" style="left:${X(nowH)}"></i>` : '');
+      return `<section class="st"><div class="sh"><b>${esc(st.name)}</b><span class="n">${rows.length}人</span>${chip}</div>
+        <div class="axis"><span></span><div class="sc">${ticks.map(h => `<span style="left:${X(h)}">${h >= 24 ? h - 24 : h}</span>`).join('')}</div></div>
+        ${rows.map(r => { const w = (r.c.e - r.c.s) / span; const tags = (r.c.ld ? '<span class="tag">責</span>' : '') + ((r.c.cl != null ? r.c.cl : r.c.e >= 31) ? '<span class="tag">締</span>' : '');
+          return `<div class="row"><div class="nm">${esc(r.p.name)}${r.p.role ? `<small>${esc(r.p.role)}</small>` : ''}</div><div class="tl">${grid}<div class="bar${r.p.group === '社員' ? ' emp' : ''}${w < .3 ? ' out' : ''}" style="left:${X(r.c.s)};width:${(w * 100).toFixed(2)}%"><span class="t">${clk(r.c.s)}〜${clk(r.c.e)}</span>${w >= .3 ? tags : ''}</div></div></div>`; }).join('')}</section>`;
+    }).join('') + '<div class="foot">青＝社員・緑＝アルバイト　「責」責任者　「締」締め</div>';
+  }
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const move = n => { day = new Date(day); day.setDate(day.getDate() + n); render(); };
+  $('#prev').onclick = () => move(-1); $('#next').onclick = () => move(1); $('#today').onclick = () => { day = bizToday(); render(); };
+  let sx = null; main.addEventListener('touchstart', e => { sx = e.touches[0].clientX; }, { passive: true }); main.addEventListener('touchend', e => { if (sx == null) return; const dx = e.changedTouches[0].clientX - sx; if (Math.abs(dx) > 70) move(dx < 0 ? 1 : -1); sx = null; });
+  try { const c = JSON.parse(lsGet('casa-today-cache') || 'null'); if (c && c.docs) { data = c; render(); } } catch (e) {}
+  load().catch(e => { if (!data) main.innerHTML = '<div class="err">読み込めませんでした。電波の良い所でもう一度開いてください。<br><small>' + esc(e.message) + '</small></div>'; });
+  let follow = true; $('#prev').addEventListener('click', () => { follow = false; }); $('#next').addEventListener('click', () => { follow = false; }); $('#today').addEventListener('click', () => { follow = true; });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { if (follow) day = bizToday(); render(); load().catch(() => {}); } }); /* 開き直したら今日に戻る（日付を動かしていた時はそのまま） */
+  setInterval(() => { if (document.visibilityState === 'visible') render(); }, 60000); /* 今の時刻の線 */
+  if ('serviceWorker' in navigator && /github\.io$/.test(location.hostname)) addEventListener('load', () => navigator.serviceWorker.register('/casa-shift/sw.js', { scope: '/casa-shift/' }).catch(() => {}));
+})();
+</script></body></html>
