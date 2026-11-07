@@ -76,7 +76,7 @@
   }
   function apply(r) {
     const ch = [];
-    for (const p in (r.docs || {})) { const d = r.docs[p]; if (!d || d.exists === false || d.data == null) { if (p in docs) { delete docs[p]; delete vers[p]; ch.push(p); } } else { docs[p] = d.data; vers[p] = d.v; ch.push(p); } }
+    for (const p in (r.docs || {})) { const d = r.docs[p]; if (!d || d.exists === false || d.data == null) { if (p in docs) { delete docs[p]; delete vers[p]; ch.push(p); } } else { if (d.v != null && vers[p] != null && d.v < vers[p]) { dbg('stale ' + p + ' v' + d.v + '<' + vers[p]); continue; } /* 古い返事（保存前に出した poll など）で新しい内容を上書きしない 2026-11-07: 並べ替えが元に戻る不具合 */ docs[p] = d.data; vers[p] = d.v; ch.push(p); } }
     (r.deleted || []).forEach(p => { if (p in docs) { delete docs[p]; delete vers[p]; ch.push(p); } });
     if (r.rev > rev) rev = r.rev; if (r.url) appUrl = r.url; window.__appUrl = appUrl; if (r.fsk) lsSet('casa-admin-fsk', r.fsk);
     return ch;
