@@ -440,6 +440,8 @@ $('#who').onclick = e => { e.stopPropagation(); let m = document.querySelector('
   const us = m.querySelector('#umStores'); if (us) us.onclick = () => { m.remove(); storesScreen(); }; document.body.appendChild(m); m.querySelector('#umLogout').onclick = () => { m.remove(); $('#logout').onclick(); }; setTimeout(() => document.addEventListener('click', function c(ev) { if (!m.contains(ev.target)) { m.remove(); document.removeEventListener('click', c); } }), 0); };
 const refreshHome = () => { if (document.visibilityState !== 'visible' || !S.ses || !app.classList.contains('home') || !$('#goView')) return; home(); }; /* 2026-11-07: ホーム画面アプリは閉じずに置かれるので、戻った時と5分おきに最新へ */
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshHome(); }); setInterval(refreshHome, 5 * 60 * 1000);
+/* 通知が届いたら、開いている画面をその場で最新に（公開した瞬間に反映 2026-11-07） */
+if ('serviceWorker' in navigator) navigator.serviceWorker.addEventListener('message', e => { const m = e.data || {}; if (m.type !== 'casa-push' || !S.ses) return; try { Object.keys(localStorage).forEach(k => { if (/^casa-(home|view|all):/.test(k)) localStorage.removeItem(k); }); } catch (er) {} if (app.classList.contains('home') || $('#goView')) home(); else if (typeof S.viewIdx === 'number' && m.kind === 'fixed') view(S.viewIdx); });
 $('#logout').onclick = () => { const k = devKey(); try { Object.keys(localStorage).forEach(x => { if (/^casa-(home|view|all|get|outbox):/.test(x)) localStorage.removeItem(x); }); } catch (e) {} localStorage.removeItem('casa-ses'); S.ses = null; devClear(); if (k) call('portal_logout', k).catch(() => {}); login(); };
 start();
 </script></body></html>
