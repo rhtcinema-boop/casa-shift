@@ -186,7 +186,7 @@ async function write(op) { await ensure(); writes++; inflight++; (window.__wlog 
     /* 1) URL の ?me=名前（最優先）  2) この画面の保存領域  3) サーバーに覚えた名前（Google にログイン中の端末のみ）  4) どれも無ければ聞く */
     try { const loc = await new Promise(r => { try { google.script.url.getLocation(r); } catch (e) { r(null); } setTimeout(() => r(null), 3000); }); const m = loc && loc.parameter && loc.parameter.me ? String(loc.parameter.me).trim().slice(0, 30) : ''; if (m) { window.__who = m; window.__topMe = m; lsSet(WHO_KEY, m); refreshWho(); call('admin_setWho', m).catch(() => {}); fin(); return; } } catch (e) {}
     if (lsGet(WHO_KEY)) { fin(); return; }
-    try { const r = await call('admin_getWho'); if (r && r.who) { window.__who = r.who; lsSet(WHO_KEY, r.who); refreshWho(); fin(); return; } } catch (e) { dbg('getWho ' + (e && e.message)); }
+    if (!window.__staticBase) try { const r = await call('admin_getWho'); if (r && r.who) { window.__who = r.who; lsSet(WHO_KEY, r.who); refreshWho(); fin(); return; } } catch (e) { dbg('getWho ' + (e && e.message)); }
     let asked = false; try { asked = !!sessionStorage.getItem('casa-admin-who-asked'); sessionStorage.setItem('casa-admin-who-asked', '1'); } catch (e) {}
     if (!asked) setTimeout(() => { if (!document.querySelector('.gas-modal')) askWho(); }, 600); };
   let bootDone; const bootP = new Promise(r => { bootDone = r; }); const boot2 = () => { Promise.resolve().then(boot).catch(() => {}).then(() => bootDone()); };
