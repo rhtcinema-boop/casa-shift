@@ -1944,7 +1944,7 @@ function mergeConfig(base, mine, theirs) {
   out.staff = staff; return out;
 }
 let serverSheets = {}; // the last copy the server sent (before my unconfirmed edits are laid on top)
-const writeQ = {}, pendingCells = {};
+const writeQ = {}, pendingCells = {}, pendingFields = {}; /* pendingFields: patchSheet で送って返事待ちの項目（okDays/order/sortKey など）。保存中に別の返事で一覧が作り直されても消えないように（2026-11-07） */
 const dataOf = snap => JSON.parse(JSON.stringify(snap.data() || {})); // 新しい実行環境では読み込んだデータが読み取り専用なので、必ず複製して使う // pendingCells: my saves not yet confirmed by the server // one write at a time per document, in the order they were made (keeps 入り→終わり from arriving reversed)
 function inOrder(path, fn) { const run = (writeQ[path] || Promise.resolve()).catch(() => {}).then(fn); writeQ[path] = run; return run; }
 const histKey = h => h.t + '-' + (h.who || '') + '-' + h.k;
@@ -1975,7 +1975,7 @@ const store = {
       synced(s);
       const prev = storeId; this._pickStore(); if (prev !== storeId || !unsubCfg) this._subConfig(); else onChange();
     }, e => console.error(e)));
-    this.unsubs.push(db.collection('sheets').onSnapshot(s => { const next = {}; s.docs.forEach(d => { next[d.id] = dataOf(d); }); for (const id in sheets) if (isPractice(id)) next[id] = sheets[id]; /* 練習用シートは保存しないので手元に残す */ serverSheets = JSON.parse(JSON.stringify(next)); for (const id in pendingCells) { const sh = next[id]; if (!sh) continue; sh.cells = sh.cells || {}; for (const k in pendingCells[id]) { const v = pendingCells[id][k]; if (v) sh.cells[k] = v; else delete sh.cells[k]; } } sheets = next; synced(s); onChange(); }, e => console.error(e)));
+    this.unsubs.push(db.collection('sheets').onSnapshot(s => { const next = {}; s.docs.forEach(d => { next[d.id] = dataOf(d); }); for (const id in sheets) if (isPractice(id)) next[id] = sheets[id]; /* 練習用シートは保存しないので手元に残す */ serverSheets = JSON.parse(JSON.stringify(next)); for (const id in pendingCells) { const sh = next[id]; if (!sh) continue; sh.cells = sh.cells || {}; for (const k in pendingCells[id]) { const v = pendingCells[id][k]; if (v) sh.cells[k] = v; else delete sh.cells[k]; } } for (const id in pendingFields) { const sh = next[id]; if (!sh) continue; for (const f in pendingFields[id]) { const v = pendingFields[id][f]; if (v === null) delete sh[f]; else sh[f] = JSON.parse(JSON.stringify(v)); } } sheets = next; synced(s); onChange(); }, e => console.error(e)));
     if (cur) this.subscribeHistory(cur);
   },
   resync() { if (dbApi) this._subscribe(); },
@@ -2041,7 +2041,9 @@ const store = {
     if (isPractice(id)) { render(); return; }
     if (localMode) { const d = this._local(); d.sheets[id] = sheets[id]; this._save(d); render(); return; }
     render();
+    const pf = pendingFields[id] = pendingFields[id] || {}; const mineF = {}; for (const f in fields) { mineF[f] = fields[f] === undefined ? null : fields[f]; pf[f] = mineF[f]; }
     try { await inOrder('sheets/' + id, () => dbApi.doc('sheets/' + id).update(send)); } catch (e) { console.error(e); toast('保存できませんでした: ' + (e.code || e.message), true); }
+    finally { setTimeout(() => { for (const f in mineF) if (pf[f] === mineF[f]) delete pf[f]; if (!Object.keys(pf).length) delete pendingFields[id]; }, 0); }
   },
   subscribeHistory(id) {
     if (unsubHist) { unsubHist(); unsubHist = null; }
