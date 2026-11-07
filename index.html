@@ -11,7 +11,7 @@
   var q = new URLSearchParams(location.search);
   if (q.get('me')) { window.__who = q.get('me').trim().slice(0, 30); window.__topMe = window.__who; }
   if (q.get('pw')) window.__pass = q.get('pw');
-  if (q.get('k')) window.__adev = q.get('k'); /* 店長アプリの端末キー（ホーム画面アプリは保存領域が別なのでURLにも持つ） */
+  if (q.get('k')) window.__adev = q.get('k'); if (q.get('photo')) window.__photoOnly = { store: q.get('photo'), date: q.get('date') || '' }; /* 当日の写真だけ（旧URLの ?daily=&img=1 から移ってきた時） */ /* 店長アプリの端末キー（ホーム画面アプリは保存領域が別なのでURLにも持つ） */
   window.__staticBase = location.origin + location.pathname;
   function runner(ok, ng) {
     var o = {
@@ -1789,7 +1789,7 @@ h4.setsec{margin:18px 0 6px;font-size:14px;font-weight:700;color:#1d2939;border-
 
 /* スマホで軽く 2026-11-07: いつも出ている部分（上のバー・下のタブ・カード）のすりガラス（背景ぼかし）をやめて、ほぼ不透明の白に。スクロール中の再計算が重いため。一時的に出る窓（メニュー・ドロワー・トースト）はそのまま */
 @media (hover:none) and (pointer:coarse){.top,.tabs,.banner,.banner.off,.banner.ro,.screen .card,.kbar,.celltip,.connpop{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}.top,.tabs,.screen .card,.kbar{background:rgba(255,255,255,.97)!important}.banner{background:rgba(255,255,255,.97)}}
-</style>
+.ntrow{display:grid;gap:4px;margin:6px 0 10px}.ntrow .ntck{display:flex;align-items:center;gap:6px;font-weight:600}.ntrow input[type=text]{width:100%;box-sizing:border-box}.ntrow .ntd{display:flex;align-items:center;gap:6px;font-size:13px}.ntrow .ntd input{width:56px}.drawer .ntrow label.ntck,.drawer .ntrow label.ntd{display:flex!important;flex-direction:row!important;align-items:center!important;justify-content:flex-start!important;text-align:left!important;gap:8px;margin:0}.drawer .ntrow label.ntck input{width:20px!important;height:20px;margin:0;flex:none}.drawer .ntrow label.ntd input{width:64px!important;flex:none;text-align:center}.drawer .ntrow{border-top:1px solid rgba(0,0,0,.06);padding-top:10px}</style>
 
 <div class="top" id="topbar">
   <div class="brand"><select id="storeSel" title="店舗" aria-label="店舗を選ぶ"></select></div>
@@ -3925,6 +3925,7 @@ function renderSettings() {
   <div class="hint">日付を展開したときに見える時間帯。例: 12〜32 なら12時から翌8時まで。範囲外のシフトは入力できますが、バーの端が赤く切れて表示されます。</div>
   <h4 class="setsec">警告</h4>
   <div class="row"><label>連勤の警告（日数、0で無効）<input type="number" id="setConsec" step="1" value="${s.maxConsec ?? 6}"></label><label>勤務間隔の警告（時間未満、0で無効）<input type="number" id="setRest" step="0.5" value="${s.minRest ?? 8}"></label></div>
+  ${notifyHtml(s)}
   <label>提出ページのURL（スタッフに共有するURL）<input type="url" id="setPortal" value="${esc(s.portalUrl || '')}" placeholder="https:\x2f\x2fscript.google.com/macros/s/…/exec"></label>
   <label>追加の休日（1行ずつ YYYY-MM-DD。祝日は自動でピンク）<textarea id="setHol" rows="3" placeholder="2026-12-31&#10;2027-01-02">${esc(s.extraHolidays || '')}</textarea></label>
   <div class="hint">必要人数（指標）は右上の「指標」画面で曜日パターンごとに設定します。</div>
@@ -3939,13 +3940,22 @@ function renderSettings() {
       row.querySelector('[data-vrdel]').onclick = () => { vrs.splice(i, 1); redraw(); }; });
     $('#vrAdd').onclick = () => { vrs.push({ from: +$('#setViewFrom').value || OPEN, to: +$('#setViewTo').value || VIEW_END, days: [false, false, false, false, false, false, false] }); redraw(); }; };
   wireVr();
-  $('#setSave').onclick = () => { const s = settingsOf(); /* 保存の瞬間の config に書く */ s.viewFrom = +$('#setViewFrom').value || OPEN; s.viewTo = +$('#setViewTo').value || VIEW_END; s.viewRanges = vrs.map(p => { let a = Math.max(OPEN, Math.min(CLOSE - 1, Math.floor(+p.from || OPEN))), b = Math.ceil(+p.to || VIEW_END); b = Math.max(a + 1, Math.min(CLOSE, b)); return { from: a, to: b, days: p.days.map(Boolean) }; }); s.lateFrom = +$('#setLate').value || 22; s.budget = +$('#setBudget').value || 0; s.breakOver = 0; s.breakMin = 0 || 0; s.maxConsec = +$('#setConsec').value || 0; s.minRest = +$('#setRest').value || 0; s.portalUrl = $('#setPortal').value.trim(); s.extraHolidays = $('#setHol').value.trim(); store.saveConfig(config).then(() => { toast('保存しました'); render(); }); };
+  $('#setSave').onclick = () => { const s = settingsOf(); /* 保存の瞬間の config に書く */ s.viewFrom = +$('#setViewFrom').value || OPEN; s.viewTo = +$('#setViewTo').value || VIEW_END; s.viewRanges = vrs.map(p => { let a = Math.max(OPEN, Math.min(CLOSE - 1, Math.floor(+p.from || OPEN))), b = Math.ceil(+p.to || VIEW_END); b = Math.max(a + 1, Math.min(CLOSE, b)); return { from: a, to: b, days: p.days.map(Boolean) }; }); s.lateFrom = +$('#setLate').value || 22; s.budget = +$('#setBudget').value || 0; s.breakOver = 0; s.breakMin = 0 || 0; s.maxConsec = +$('#setConsec').value || 0; s.minRest = +$('#setRest').value || 0; s.portalUrl = $('#setPortal').value.trim(); s.extraHolidays = $('#setHol').value.trim(); s.notify = readNotify(); store.saveConfig(config).then(() => { toast('保存しました'); render(); }); };
   $('#setDelSheet').onclick = e => { if (!cur) return; const sh = sheets[cur]; popover(e.currentTarget, `<b>${esc(lbl(sh))} ${sh.phase === 'wish' ? '希望' : '確定'} を削除しますか？</b><div class="hint">${Object.keys(sh.cells).length}コマの入力が消えます。元に戻せません。</div><div class="row"><button class="btn small danger" id="delYes">削除する</button></div>`, pop => { $('#delYes', pop).onclick = async () => { await store.deleteSheet(cur); cur = null; pop.remove(); openDrawer(''); render(); toast('削除しました'); }; }); };
   body.querySelectorAll('[data-sn]').forEach(inp => inp.onchange = () => { const list = stores.map(x => ({ ...x })); list[+inp.dataset.sn].name = inp.value.trim() || list[+inp.dataset.sn].name; store.saveStores(list).then(() => { toast('店舗名を保存'); renderStoreSel(); }); });
   $('#addStore').onclick = async () => { const name = $('#newStore').value.trim(); if (!name) return; const id = 'st' + uid(); const list = [...stores.map(x => ({ ...x })), { id, name }]; await store.saveStores(list); toast(`${name} を追加しました。右上で切り替えられます`); renderSettings(); };
   if (!canW()) body.querySelectorAll('input,textarea,button').forEach(el => el.disabled = true);
 }
 
+/* スタッフへのアプリ通知の文面・タイミング（サーバーの PUSH_DEFAULTS_ と同じ初期値）2026-11-07 */
+const NOTIFY_DEF = { open: { on: true, text: '{期間}の希望を受付中（締切 {締切}）' }, fixed: { on: true, text: '{期間}のシフトが出ました' }, remind: { on: true, text: '{期間}の希望の締切は{締切}です', days: 1 }, hour: 10 };
+function notifyOf(s) { const n = s.notify || {}; return { open: { ...NOTIFY_DEF.open, ...(n.open || {}) }, fixed: { ...NOTIFY_DEF.fixed, ...(n.fixed || {}) }, remind: { ...NOTIFY_DEF.remind, ...(n.remind || {}) }, hour: n.hour != null && n.hour !== '' ? +n.hour : NOTIFY_DEF.hour }; }
+function notifyHtml(s) { const n = notifyOf(s); const row = (k, label, extra) => `<div class="ntrow"><label class="ntck"><input type="checkbox" id="nt_${k}_on" ${n[k].on ? 'checked' : ''}>${label}</label>${extra || ''}<input type="text" id="nt_${k}_t" value="${esc(n[k].text)}" maxlength="80"></div>`;
+  return `<h4 class="setsec">スタッフへの通知 <button type="button" class="lgq" aria-label="通知の説明" onclick="event.preventDefault();toast('「通知を受け取る」をオンにしたスタッフのスマホに届きます。文中の {期間} {締切} は自動で入ります。確定は「公開」した時にすぐ送ります', 6000)">?</button></h4>
+  <div class="row"><label>受付開始・締切前を送る時刻<input type="number" id="nt_hour" min="0" max="23" step="1" value="${n.hour}"></label></div>
+  ${row('open', '希望の受付開始')}${row('remind', '締切の前', `<label class="ntd"><input type="number" id="nt_remind_d" min="0" max="7" step="1" value="${+n.remind.days || 0}">日前（まだ出していない人だけ）</label>`)}${row('fixed', 'シフトの確定（公開した時）')}`; }
+function readNotify() { const v = id => document.getElementById(id); const t = (k) => ({ on: !!v('nt_' + k + '_on')?.checked, text: (v('nt_' + k + '_t')?.value || '').trim() || NOTIFY_DEF[k].text });
+  return { hour: Math.max(0, Math.min(23, Math.round(+v('nt_hour')?.value || 0))), open: t('open'), fixed: t('fixed'), remind: { ...t('remind'), days: Math.max(0, Math.min(7, Math.round(+v('nt_remind_d')?.value || 0))) } }; }
 // ---------- boot ----------
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { document.querySelectorAll('.drawer.open').forEach(d => d.classList.remove('open')); document.querySelectorAll('.pop').forEach(p => p.remove()); const ph = $('.photo'); if (ph) ph.remove(); } });
 document.body.dataset.view = 'grid';
