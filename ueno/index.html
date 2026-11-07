@@ -213,7 +213,7 @@ function storeBoxesMissingName() { /* 「追加する」を選んだのに名前
 function addedMsg(added) { const a = (added || []).filter(x => x); if (!a.length) return ''; const ok = a.filter(x => x.ok && !x.existed).map(x => `casa${x.store}（${x.tab || 'シフト表'}）`); const ng = a.filter(x => !x.ok).map(x => `casa${x.store}: ${x.error || '追加できませんでした'}`); return (ok.length ? ok.join('・') + ' に名前を追加しました' : '') + (ng.length ? (ok.length ? '／' : '') + ng.join('／') : ''); }
 function storesScreen() { if (!S.init) { needInit().then(storesScreen).catch(e => toast(e.message)); return; } setBack(home); const h = S.home; app.innerHTML = `<h1>店舗の設定</h1><div class="card"><div class="stt">働いている・働くかもしれない店舗</div>${storeBoxes(h.myStores || [], false)}<div class="hint">働いている店舗にチェックして、その店の一覧から自分を選んでください。一覧にいなければ「追加する」で、その店のシフト表に名前が入ります。別の店のページを初めて開くときは、その店で暗証番号を決めます。</div><button class="primary" id="stSave">保存</button></div>`;
   wireStoreBoxes(); $('#stSave').onclick = async () => { const b = $('#stSave'); { const miss = storeBoxesMissingName(); if (miss.length) return toast('casa' + miss.join('・') + ' で使う名前を入れてください', 3500); } b.disabled = true; try { const r = await call('portal_setStores', S.ses, readStoreBoxes(S.name)); S.home.myStores = r.stores; const am = addedMsg(r.added); toast(am ? '保存しました。' + am : '保存しました', am ? 5000 : 2600); home(); } catch (e) { b.disabled = false; if (!relogin(e)) toast(e.message); } }; }
-const clk = h => h == null ? '' : (h >= 24 ? '翌' : '') + Math.floor(h % 24) + ':' + (h % 1 ? '30' : '00');
+const clk = h => { if (h == null) return ''; const x = h >= 24 ? h - 24 : h; return (h >= 24 ? '翌' : '') + (Number.isInteger(x) ? String(x) : x.toFixed(1)); }; /* 表記はシフト表と同じ: 13.5・翌5（2026-11-07） */
 const mdw = iso => { const d = new Date(iso + 'T00:00:00'); return (d.getMonth() + 1) + '/' + d.getDate() + '(' + '日月火水木金土'[d.getDay()] + ')'; };
 function relogin(e) { if (/ログインし直/.test(e.message)) { localStorage.removeItem('casa-ses'); S.ses = null; resumeOrLogin(e.message); return true; } return false; }
 async function home() {
@@ -372,7 +372,7 @@ function render() {
     <div class="row"><button id="tplUse" ${S.tpl && Object.keys(S.tpl).length ? '' : 'disabled'}>保存を呼び出す</button><button id="prev" ${d.prev ? '' : 'disabled'}>前回をコピー</button></div>
     <div class="row"><button id="tplSave">今の希望を保存</button><button id="clr">全部消す</button></div>
   </div>
-  <div class="card ${S.mode === 'off' ? 'offmode' : ''}" id="days"><div class="hint">時間の書き方 ${qq('17.5＝17:30、25＝翌1時、31＝翌7時（シフト表と同じ）', '時間の書き方')}</div>
+  <div class="card ${S.mode === 'off' ? 'offmode' : ''}" id="days"><div class="hint">時間の書き方 ${qq('17.5＝17時半、25＝翌1、31＝翌7（シフト表と同じ）', '時間の書き方')}</div>
     ${d.days.map((x, i) => { const v = S.vals[i] || ''; const off = v === '休'; const [a, b] = off || !v ? ['', ''] : v.split('-');
       return `<div class="day ${x.off ? 'we' : ''} ${off ? 'isoff' : ''}" data-i="${i}"><div class="dt">${esc(x.md)}<small>${esc(x.wd)}</small></div><input inputmode="decimal" data-f="s" value="${esc(a)}" class="${a ? 'has' : ''}" placeholder="入り"><input inputmode="decimal" data-f="e" value="${esc(b)}" class="${b ? 'has' : ''}" placeholder="終わり"><button class="offb" data-off>休</button><select class="pick">${opts}</select></div>`; }).join('')}
   </div>
