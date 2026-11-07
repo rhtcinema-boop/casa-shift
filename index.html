@@ -172,7 +172,10 @@
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') poll(); });
   let writes = 0;
   let inflight = 0; /* 送信中の書き込み数（テストが落ち着くのを待つ用） */
-async function write(op) { await ensure(); writes++; inflight++; (window.__wlog = window.__wlog || []).push({ p: op.path, t: Date.now(), call: 1 }); try { const r = await call('admin_write', [op]); const ch = apply(r); notify(ch); snapSave(); } finally { inflight--; } }
+/* 書く前に手元の docs にも先に反映する（2026-11-07）: 保存が返るまでの数秒間に他の返事（マスの保存・在席・ウィジェット）で一覧を作り直すと、並べ替え（order/sortKey）が手元から消えて表が元に戻っていた。サーバーの merge_ と同じ合成（入れ子は中身ごと・null は削除・配列は丸ごと） */
+  const mergeLocal = (t, s) => { for (const k in s) { const v = s[k]; if (v === null) { delete t[k]; continue; } if (v && typeof v === 'object' && !Array.isArray(v) && t[k] && typeof t[k] === 'object' && !Array.isArray(t[k])) mergeLocal(t[k], v); else t[k] = clone(v); } };
+  function applyLocal(op) { const p = op.path; if (op.op === 'delete') { if (p in docs) { delete docs[p]; delete vers[p]; } return; } if (op.op === 'set') { docs[p] = clone(op.data == null ? {} : op.data); return; } if (op.op === 'update' && p in docs) mergeLocal(docs[p], op.data || {}); }
+  async function write(op) { await ensure(); writes++; inflight++; (window.__wlog = window.__wlog || []).push({ p: op.path, t: Date.now(), call: 1 }); try { applyLocal(op); } catch (e) { dbg('applyLocal ' + (e && e.message)); } try { const r = await call('admin_write', [op]); const ch = apply(r); notify(ch); snapSave(); } finally { inflight--; } }
   async function fetchOne(p) { if (fetched.has(p)) return; fetched.add(p); try { const r = await call('admin_get', p); const ch = apply({ docs: { [p]: r } }); if (ch.length) notify(ch); } catch (e) { fetched.delete(p); throw e; } }
   const needFetch = p => !(p in docs) && p.indexOf('history/') === 0 && !fetched.has(p);
   const doc = p => ({
