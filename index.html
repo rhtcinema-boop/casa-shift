@@ -2,7 +2,7 @@
 <html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>casaシフト表</title><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="casa管理画面"><link rel="apple-touch-icon" href="admin-icon-180.png"><link rel="icon" href="admin-icon-192.png"><link rel="manifest" href="admin.webmanifest"><meta name="theme-color" content="#f5f5f7">
 <style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style>
 <script>if("serviceWorker" in navigator&&/github\\.io$/.test(location.hostname))addEventListener("load",function(){navigator.serviceWorker.register("/casa-shift/sw.js",{scope:"/casa-shift/"}).catch(function(){})});</script>
-<script>window.CASA_API_URL="https://script.google.com/macros/s/AKfycby8ocFc0ypPPbaquHSRa5iugFGpyvtltCOmKFi3ZvEkN6eWoC6d5OcL4jtvGSfMsBX-RQ/exec";</script>
+<script>window.CASA_API_URL="https://script.google.com/macros/s/AKfycby8ocFc0ypPPbaquHSRa5iugFGpyvtltCOmKFi3ZvEkN6eWoC6d5OcL4jtvGSfMsBX-RQ/exec";window.CASA_FB={"apiKey":"AIzaSyDRmKgWhOVOBf9MRSzhKMHST83rOiNL9ds","authDomain":"casa-shift.firebaseapp.com","projectId":"casa-shift","storageBucket":"casa-shift.firebasestorage.app","messagingSenderId":"237014095241","appId":"1:237014095241:web:cefe69f3b89af561b9fd58","vapidKey":"BN-p0OWix9jA47TCd98Sm-mDXGJwzc-vApJwvVldnYVIYLtE_mu_QavEy7KuchcK1e2O6RHkVdxzJGjsvYGXLd0"};</script>
 <script>/* 店長アプリを Apps Script の外（GitHub Pages）で開いた時だけ使う: google.script.run / google.script.url の代わりに、窓口へ fetch で頼む。
    Apps Script の画面上部の「このアプリケーションは Google Apps Script のユーザーによって…」の帯を出さないため（オーナー指示 2026-10-21） */
 (function () {
@@ -78,7 +78,7 @@
     const ch = [];
     for (const p in (r.docs || {})) { const d = r.docs[p]; if (!d || d.exists === false || d.data == null) { if (p in docs) { delete docs[p]; delete vers[p]; ch.push(p); } } else { docs[p] = d.data; vers[p] = d.v; ch.push(p); } }
     (r.deleted || []).forEach(p => { if (p in docs) { delete docs[p]; delete vers[p]; ch.push(p); } });
-    if (r.rev > rev) rev = r.rev; if (r.url) appUrl = r.url; window.__appUrl = appUrl;
+    if (r.rev > rev) rev = r.rev; if (r.url) appUrl = r.url; window.__appUrl = appUrl; if (r.fsk) lsSet('casa-admin-fsk', r.fsk);
     return ch;
   }
   // ---- 合言葉・名前の小さな画面 ----
@@ -122,10 +122,18 @@
   const SNAP_KEY = 'casa-admin-snap:' + (window.CASA_API_URL || 'gas'), SNAP_DAYS = 3; let snapT = null;
   const snapSave = () => { clearTimeout(snapT); snapT = setTimeout(() => { try { localStorage.setItem(SNAP_KEY, JSON.stringify({ rev, at: Date.now(), url: appUrl, docs, vers })); } catch (e) { try { localStorage.removeItem(SNAP_KEY); } catch (e2) {} } }, 2500); };
   const snapLoad = () => { try { const s = JSON.parse(localStorage.getItem(SNAP_KEY) || 'null'); if (s && s.rev > 0 && s.docs && Date.now() - s.at < SNAP_DAYS * 864e5) return s; } catch (e) {} return null; };
+  /* 作り直し 2026-11-07: 速い置き場（Firestore・東京）に上野が置いた全データ（圧縮）を直接読む。0.3秒前後 */
+  async function fsSnap() { const k = lsGet('casa-admin-fsk'), fb = window.CASA_FB; if (!/^[0-9a-f]{40,}$/.test(k || '') || !fb || typeof DecompressionStream === 'undefined') return null;
+    try { const res = await fetch('https://firestore.googleapis.com/v1/projects/' + fb.projectId + '/databases/(default)/documents/v/' + k + '/admin/snap?key=' + fb.apiKey); if (!res.ok) return null; const j = await res.json(); const z = j.fields && j.fields.z && j.fields.z.stringValue; if (!z) return null;
+      const bin = atob(z); const u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+      const r = JSON.parse(await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text()); return r && r.docs && r.rev ? r : null; } catch (e) { dbg('fs ' + (e && e.message)); return null; } }
+  const catchUp = () => { setTimeout(() => { poll(); }, 0); }; /* 控え・速い置き場で先に出したあと、最新の変更を裏で読む */
   function ensure() {
     return loadP || (loadP = (async () => {
-      const sn = snapLoad();
-      if (sn) { try { const r = await call('admin_poll', sn.rev); if (!r.trunc && r.rev >= sn.rev) { docs = sn.docs; vers = sn.vers || {}; rev = sn.rev; appUrl = sn.url || ''; apply(r); dbg('snap ' + sn.rev + '→' + rev); snapSave(); return; } } catch (e) { if (e.code === 'need_pass' || e.code === 'bad_pass') { /* 下の通常の読み込みで合言葉を聞く */ } else dbg('snap poll ' + (e && e.message)); } }
+      const sn = snapLoad(); const fsP = fsSnap();
+      const fr = await Promise.race([fsP, new Promise(r => setTimeout(() => r(null), sn ? 400 : 2500))]); /* 端末の控えがあれば 0.4 秒だけ待つ */
+      const base = fr && (!sn || fr.rev >= sn.rev) ? { docs: fr.docs, vers: {}, rev: fr.rev, url: fr.url || (sn && sn.url) || '' } : sn;
+      if (base) { docs = base.docs; vers = base.vers || {}; rev = base.rev; appUrl = base.url || ''; dbg('fast ' + (base === sn ? 'local' : 'fs') + ' ' + rev); snapSave(); catchUp(); return; }
       for (let i = 0; ; i++) {
         try { const r = await call('admin_load'); apply(r); snapSave(); return; }
         catch (e) { if (e.code === 'need_pass' || e.code === 'bad_pass') { await askPass(e.code === 'bad_pass'); continue; } if (i >= 3) { showLoadError(e); throw e; } await sleep(1500 * (i + 1)); }
