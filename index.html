@@ -132,7 +132,10 @@
     return loadP || (loadP = (async () => {
       const sn = snapLoad(); const fsP = fsSnap();
       const fr = await Promise.race([fsP, new Promise(r => setTimeout(() => r(null), sn ? 400 : 2500))]); /* 端末の控えがあれば 0.4 秒だけ待つ */
-      const base = fr && (!sn || fr.rev >= sn.rev) ? { docs: fr.docs, vers: {}, rev: fr.rev, url: fr.url || (sn && sn.url) || '' } : sn;
+      const unwrap = o => { const d = {}, v = {}; Object.keys(o || {}).forEach(p => { const x = o[p]; if (x && typeof x === 'object' && 'data' in x && 'v' in x && Object.keys(x).length <= 3) { if (x.data != null) { d[p] = x.data; v[p] = x.v; } } else d[p] = x; }); return { d, v }; }; /* 速い置き場の形 {v,data} → 画面の形（2026-11-07 修正: そのまま入れて「読み込み中」で止まっていた） */
+      if (sn) { const u = unwrap(sn.docs); sn.docs = u.d; sn.vers = Object.assign({}, sn.vers || {}, u.v); }
+      let fb = null; if (fr && (!sn || fr.rev >= sn.rev)) { const u = unwrap(fr.docs); fb = { docs: u.d, vers: u.v, rev: fr.rev, url: fr.url || (sn && sn.url) || '' }; }
+      const base = fb || sn;
       if (base) { docs = base.docs; vers = base.vers || {}; rev = base.rev; appUrl = base.url || ''; dbg('fast ' + (base === sn ? 'local' : 'fs') + ' ' + rev); snapSave(); catchUp(); return; }
       for (let i = 0; ; i++) {
         try { const r = await call('admin_load'); apply(r); snapSave(); return; }
@@ -1882,7 +1885,7 @@ let view = 'grid';
 const profileCache = {};
 function canW() { return canWriteRole && online && !offlineCache && (!!dbApi || localMode); }
 const CACHE_KEY = LS_KEY + '-cache';
-function loadCache() { try { return JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); } catch { return null; } }
+function loadCache() { try { const c = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); if (c && c.sheets) Object.keys(c.sheets).forEach(id => { const s = c.sheets[id]; if (!s || typeof s.start !== 'string') delete c.sheets[id]; }); return c; } catch { return null; } } /* 壊れた控え（開始日の無いシート）は捨てる 2026-11-07 */
 let cacheT = null;
 function saveCacheSoon() { clearTimeout(cacheT); cacheT = setTimeout(() => { try { const c = loadCache() || {}; const configs = c.configs || {}; if (config && storeId) configs[storeId] = config; localStorage.setItem(CACHE_KEY, JSON.stringify({ stores, configs, sheets, at: lastSync || c.at || 0 })); } catch {} }, 800); }
 function synced(snap) { if (!snap?.metadata?.fromCache) lastSync = Date.now(); saveCacheSoon(); }
@@ -2048,7 +2051,7 @@ function lbl(sh) { if (!sh) return ''; const y = sh.start.slice(0, 4); return st
 const isPractice = id => typeof id === 'string' && id.startsWith('__practice');
 function storeSheets() { return Object.values(sheets).filter(s => sheetStore(s) === storeId && (!isPractice(s.id) || practice)); }
 const PH_ORD = { wish: 0, draft: 1, fixed: 2 }, PH_LABEL = { wish: '希望', draft: '作成中', fixed: '確定' };
-function sortedSheetIds() { return storeSheets().sort((a, b) => (a.start + (PH_ORD[a.phase] ?? 1)).localeCompare(b.start + (PH_ORD[b.phase] ?? 1))).map(s => s.id); }
+function sortedSheetIds() { return storeSheets().filter(s => s && typeof s.start === 'string').sort((a, b) => (a.start + (PH_ORD[a.phase] ?? 1)).localeCompare(b.start + (PH_ORD[b.phase] ?? 1))).map(s => s.id); }
 function wishSheetOf(sh) { if (!sh) return null; return sh.phase !== 'wish' ? storeSheets().find(s => s.period === sh.period && s.phase === 'wish') : null; }
 const sibling = (sh, ph) => sh ? storeSheets().find(s => s.period === sh.period && s.phase === ph) || null : null;
 const FIXED_RO = '確定は直接は直せません。「作成中」で直して「確定する」を押してください';
