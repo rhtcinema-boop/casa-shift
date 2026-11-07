@@ -117,23 +117,29 @@
   function showLoadError(e) { const d = document.createElement('div'); d.className = 'gas-modal'; d.innerHTML = '<div class="box"><h3>データを読み込めませんでした</h3><p>' + String(e && e.message || e).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c])) + '</p><div class="btns"><button class="ok" type="button">もう一度読み込む</button></div></div>'; document.body.appendChild(d); d.querySelector('.ok').onclick = () => location.reload(); }
   // ---- 読み込み・見張り ----
   let loadP = null, polling = false;
+  /* 軽くする 2026-11-07: 前回読んだ全データを端末に控え、次に開いた時は「それ以降の変更」だけ読む（全部 約480KB・3秒 → 差分 約2秒・数KB） */
+  const SNAP_KEY = 'casa-admin-snap:' + (window.CASA_API_URL || 'gas'), SNAP_DAYS = 3; let snapT = null;
+  const snapSave = () => { clearTimeout(snapT); snapT = setTimeout(() => { try { localStorage.setItem(SNAP_KEY, JSON.stringify({ rev, at: Date.now(), url: appUrl, docs, vers })); } catch (e) { try { localStorage.removeItem(SNAP_KEY); } catch (e2) {} } }, 2500); };
+  const snapLoad = () => { try { const s = JSON.parse(localStorage.getItem(SNAP_KEY) || 'null'); if (s && s.rev > 0 && s.docs && Date.now() - s.at < SNAP_DAYS * 864e5) return s; } catch (e) {} return null; };
   function ensure() {
     return loadP || (loadP = (async () => {
+      const sn = snapLoad();
+      if (sn) { try { const r = await call('admin_poll', sn.rev); if (!r.trunc && r.rev >= sn.rev) { docs = sn.docs; vers = sn.vers || {}; rev = sn.rev; appUrl = sn.url || ''; apply(r); dbg('snap ' + sn.rev + '→' + rev); snapSave(); return; } } catch (e) { if (e.code === 'need_pass' || e.code === 'bad_pass') { /* 下の通常の読み込みで合言葉を聞く */ } else dbg('snap poll ' + (e && e.message)); } }
       for (let i = 0; ; i++) {
-        try { const r = await call('admin_load'); apply(r); return; }
+        try { const r = await call('admin_load'); apply(r); snapSave(); return; }
         catch (e) { if (e.code === 'need_pass' || e.code === 'bad_pass') { await askPass(e.code === 'bad_pass'); continue; } if (i >= 3) { showLoadError(e); throw e; } await sleep(1500 * (i + 1)); }
       }
     })());
   }
   async function poll() {
     if (polling || !loadP) return; polling = true;
-    try { await loadP; const r = await call('admin_poll', rev); const ch = apply(r); if (ch.length) notify(ch); } catch (e) {} finally { polling = false; }
+    try { await loadP; const r = await call('admin_poll', rev); if (r && r.trunc) { const f = await call('admin_load'); const gone = Object.keys(docs).filter(p => !(p in (f.docs || {}))); gone.forEach(p => { delete docs[p]; delete vers[p]; }); const ch = apply(f).concat(gone); if (ch.length) { notify(ch); snapSave(); } return; } const ch = apply(r); if (ch.length) { notify(ch); snapSave(); } } catch (e) {} finally { polling = false; }
   }
   setInterval(() => { if (document.visibilityState === 'visible' && navigator.onLine !== false) poll(); }, 12000);
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') poll(); });
   let writes = 0;
   let inflight = 0; /* 送信中の書き込み数（テストが落ち着くのを待つ用） */
-async function write(op) { await ensure(); writes++; inflight++; (window.__wlog = window.__wlog || []).push({ p: op.path, t: Date.now(), call: 1 }); try { const r = await call('admin_write', [op]); const ch = apply(r); notify(ch); } finally { inflight--; } }
+async function write(op) { await ensure(); writes++; inflight++; (window.__wlog = window.__wlog || []).push({ p: op.path, t: Date.now(), call: 1 }); try { const r = await call('admin_write', [op]); const ch = apply(r); notify(ch); snapSave(); } finally { inflight--; } }
   async function fetchOne(p) { if (fetched.has(p)) return; fetched.add(p); try { const r = await call('admin_get', p); const ch = apply({ docs: { [p]: r } }); if (ch.length) notify(ch); } catch (e) { fetched.delete(p); throw e; } }
   const needFetch = p => !(p in docs) && p.indexOf('history/') === 0 && !fetched.has(p);
   const doc = p => ({
@@ -1779,6 +1785,9 @@ body.ph-wish .grid tr.sep td.sp-short,body.ph-wish .grid tr.sep td.sp-ex,body.ma
 #drStaff td input{border:1px solid #d1d5db!important;background:#fff!important}
 h4.setsec{margin:18px 0 6px;font-size:14px;font-weight:700;color:#1d2939;border-top:1px solid #eaecf0;padding-top:14px}h4.setsec:first-of-type{border-top:0;padding-top:0;margin-top:8px}
 .hint,.screen .note,.note{color:#5f6368}
+
+/* スマホで軽く 2026-11-07: いつも出ている部分（上のバー・下のタブ・カード）のすりガラス（背景ぼかし）をやめて、ほぼ不透明の白に。スクロール中の再計算が重いため。一時的に出る窓（メニュー・ドロワー・トースト）はそのまま */
+@media (hover:none) and (pointer:coarse){.top,.tabs,.banner,.banner.off,.banner.ro,.screen .card,.kbar,.celltip,.connpop{-webkit-backdrop-filter:none!important;backdrop-filter:none!important}.top,.tabs,.screen .card,.kbar{background:rgba(255,255,255,.97)!important}.banner{background:rgba(255,255,255,.97)}}
 </style>
 
 <div class="top" id="topbar">
