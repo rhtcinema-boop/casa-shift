@@ -127,7 +127,7 @@ button:disabled{opacity:1!important;color:#777!important;background:#eef0f3!impo
 .plist button .act{font-size:14px;font-weight:600;color:#0071e3;margin-left:10px}
 .calhero b{font-size:15px;line-height:1.5}
 details.stepd summary{font-size:14px;font-weight:600;color:#0071e3;cursor:pointer;padding:4px 0}details.stepd[open] summary{margin-bottom:4px}
-</style></head>
+.sst{margin-top:8px;font-size:14px;color:#6e6e73}.sst.ok{color:#248a3d;font-weight:600}.sst.ng{color:#c2410c;font-weight:600}.sst .link{display:block;margin-top:6px}</style></head>
 <body>
 <header><button id="back" hidden aria-label="前の画面に戻る">‹ 戻る</button><b id="htitle">casa シフト</b><span class="sp"></span><button id="who" hidden></button><button class="link" id="logout" hidden>ログアウト</button></header>
 <main id="app"><div class="card hint">読み込み中…</div></main>
@@ -223,7 +223,7 @@ async function home() {
   if (cached) { S.home = cached; renderHome(); } else app.innerHTML = '<div class="card hint">読み込み中…</div>';
   let nh; try { nh = await call('portal_home', S.ses); } catch (e) { if (S.nav !== myNav) return; if (!relogin(e) && !cached) app.innerHTML = `<div class="card err">${esc(e.message)}</div>`; return; }
   const js = JSON.stringify(nh); try { localStorage.setItem(hk, js); } catch (e) {} const changed = !cached || js !== JSON.stringify(cached); S.home = nh;
-  if (changed && S.nav === myNav) renderHome(); prefetchView();
+  if (changed && S.nav === myNav) renderHome(); prefetchView(); if (!S.flushed) { S.flushed = 1; flushOutbox(); }
 }
 function prefetchView() { /* よく見る「今回のシフト」と、受付中の希望を先に読んでおく */ try { (S.home.wishes || []).filter(w => w.status === 'open').slice(0, 2).forEach(w => { const gk = 'casa-get:' + S.name + ':' + w.title; if (localStorage.getItem(gk)) return; call('portal_get', S.ses, w.title).then(d => { try { localStorage.setItem(gk, JSON.stringify(d)); } catch (e) {} }).catch(() => {}); }); } catch (e) {} try { const vs = S.home.views || []; if (!vs.length) return; const t = S.home.today; let ci = vs.findIndex(v => v.start <= t && t <= v.end); if (ci < 0) { ci = vs.findIndex(v => v.start > t); if (ci < 0) ci = vs.length - 1; } const ck = 'casa-view:' + S.name + ':' + vs[ci].title; if (localStorage.getItem(ck)) return; call('portal_view', S.ses, vs[ci].title).then(d => { try { localStorage.setItem(ck, JSON.stringify(d)); } catch (e) {} }).catch(() => {}); } catch (e) {} }
 function renderHome() {
@@ -375,13 +375,21 @@ $('#send').onclick = async () => {
   for (let i = 0; i < S.vals.length; i++) { const v = S.vals[i]; if (v && v !== '休' && !/^\d{1,2}(\.5)?-\d{1,2}(\.5)?$/.test(v)) return toast(`${S.data.days[i].md} の時間を「18-25」のように入れてください`, 3500); }
   for (let i = 0; i < S.vals.length; i++) { const v = S.vals[i]; if (!v || v === '休') continue; const [x, y] = v.split('-').map(Number); if (x < 5 || y > 36 || y <= x || y - x > 20) return toast(`${S.data.days[i].md} の時間を見直してください（終わりは入りより後、25＝翌1時）`, 4000); } // 入りと終わりが逆・長すぎる勤務は送る前に止める
   if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'もう一度押して送信'; const el = $('#sum'); el.textContent = `出勤できる ${c.on}日／休み ${c.off}日／未入力 ${c.none}日 で送信します${c.none ? '（未入力の日は希望なし）' : ''}`; el.classList.add('armed'); return; }
-  b.disabled = true; b.textContent = '送信中…';
-  try { const r = await call('portal_submit', S.ses, S.data.title, S.vals, S.memo || ''); try { localStorage.setItem('casa-get:' + S.name + ':' + S.data.title, JSON.stringify(Object.assign({}, S.data, { mine: S.vals.slice(), memo: S.memo || '' }))); } catch (e) {} setBack(home); app.innerHTML = `<div class="card done"><b>送信しました</b>${esc(S.data.title.replace('希望', ''))}：出勤できる ${r.on}日・休み ${r.off}日<div class="hint" style="margin-top:10px">直したいときは、もう一度開いて送り直せば上書きされます。</div>${S.memo ? `<div class="hint">メモ: ${esc(S.memo)}</div>` : ''}<button class="link" id="again">内容を見直す</button><button class="link" id="home2">ホームへ</button></div>`; $('#bar').hidden = true; $('#again').onclick = () => open(S.data.title); $('#home2').onclick = home; }
-  catch (e) { toast(e.message, 4000); if (/ログインし直/.test(e.message)) { localStorage.removeItem('casa-ses'); S.ses = null; resumeOrLogin(e.message); } }
+  /* 待たせない送信 2026-11-07: 押したらすぐ「送信しました」。裏で送り、届いたら ✓、送れなければ「再送」。送る前の内容は端末に控え（casa-outbox:名前:タブ）、次に開いた時にも送り直す */
+  const title = S.data.title, item = { name: S.name, title, vals: S.vals.slice(), memo: S.memo || '' };
+  try { localStorage.setItem('casa-outbox:' + S.name + ':' + title, JSON.stringify(item)); localStorage.setItem('casa-get:' + S.name + ':' + title, JSON.stringify(Object.assign({}, S.data, { mine: item.vals, memo: item.memo }))); } catch (e) {}
+  setBack(home); app.innerHTML = `<div class="card done"><b>送信しました</b>${esc(title.replace('希望', ''))}：出勤できる ${c.on}日・休み ${c.off}日<div class="sst" id="sst">送信中…</div><div class="hint" style="margin-top:10px">直したいときは、もう一度開いて送り直せば上書きされます。</div>${item.memo ? `<div class="hint">メモ: ${esc(item.memo)}</div>` : ''}<button class="link" id="again">内容を見直す</button><button class="link" id="home2">ホームへ</button></div>`; $('#bar').hidden = true; $('#again').onclick = () => open(title); $('#home2').onclick = home;
   b.disabled = false; b.textContent = '送信する'; delete b.dataset.armed;
+  sendOut(item);
 };
+function sendOut(item) { /* 控えの1件を送る。画面に #sst があれば結果を出す */
+  const k = 'casa-outbox:' + item.name + ':' + item.title; const st = () => document.getElementById('sst');
+  return call('portal_submit', S.ses, item.title, item.vals, item.memo || '').then(() => { try { localStorage.removeItem(k); } catch (e) {} const el = st(); if (el) { el.className = 'sst ok'; el.textContent = '✓ 店長に届きました'; } if (S.home && S.home.wishes) { const w = S.home.wishes.find(x => x.title === item.title); if (w) w.submitted = true; } return true; })
+    .catch(e => { const el = st(); if (/ログインし直/.test(e.message)) { localStorage.removeItem('casa-ses'); S.ses = null; resumeOrLogin(e.message); return false; } if (el) { el.className = 'sst ng'; el.innerHTML = '⚠ まだ届いていません（' + esc(e.message) + '）<button class="link" id="resend">もう一度送る</button>'; $('#resend').onclick = () => { el.className = 'sst'; el.textContent = '送信中…'; sendOut(item); }; } else toast('希望が送れていません。もう一度開いて送信してください', 5000); return false; });
+}
+function flushOutbox() { /* 前回送れなかった希望を送る */ try { Object.keys(localStorage).filter(x => x.indexOf('casa-outbox:' + S.name + ':') === 0).forEach(x => { const it = JSON.parse(localStorage.getItem(x) || 'null'); if (it && it.vals) sendOut(it).then(ok => { if (ok) toast(it.title.replace('希望', '') + 'の希望を送りました', 3500); }); }); } catch (e) {} }
 $('#who').onclick = e => { e.stopPropagation(); let m = document.querySelector('.umenu'); if (m) { m.remove(); return; } m = document.createElement('div'); m.className = 'umenu'; m.innerHTML = ((S.home && (S.home.allStores || []).length > 1) ? '<button id="umStores">店舗の設定</button>' : '') + '<button id="umLogout">ログアウト</button>';
   const us = m.querySelector('#umStores'); if (us) us.onclick = () => { m.remove(); storesScreen(); }; document.body.appendChild(m); m.querySelector('#umLogout').onclick = () => { m.remove(); $('#logout').onclick(); }; setTimeout(() => document.addEventListener('click', function c(ev) { if (!m.contains(ev.target)) { m.remove(); document.removeEventListener('click', c); } }), 0); };
-$('#logout').onclick = () => { const k = devKey(); try { Object.keys(localStorage).forEach(x => { if (/^casa-(home|view|all|get):/.test(x)) localStorage.removeItem(x); }); } catch (e) {} localStorage.removeItem('casa-ses'); S.ses = null; devClear(); if (k) call('portal_logout', k).catch(() => {}); login(); };
+$('#logout').onclick = () => { const k = devKey(); try { Object.keys(localStorage).forEach(x => { if (/^casa-(home|view|all|get|outbox):/.test(x)) localStorage.removeItem(x); }); } catch (e) {} localStorage.removeItem('casa-ses'); S.ses = null; devClear(); if (k) call('portal_logout', k).catch(() => {}); login(); };
 start();
 </script></body></html>
