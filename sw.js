@@ -1,6 +1,6 @@
 /* casa シフト（GitHub Pages）: 一度読んだページをスマホに置いて、次からはすぐ開く。裏で最新を取り、次に開いた時に新しい版になる。
    サーバー（script.google.com）への問い合わせには手を出さない。2026-11-07 */
-const C = 'casa-shift-v1';
+const C = 'casa-shift-v2';
 self.addEventListener('install', () => self.skipWaiting());
 self.addEventListener('activate', e => e.waitUntil((async () => { for (const k of await caches.keys()) if (k !== C) await caches.delete(k); await self.clients.claim(); })()));
 self.addEventListener('fetch', e => {
@@ -12,4 +12,17 @@ self.addEventListener('fetch', e => {
     if (hit) { e.waitUntil(net.catch(() => {})); return hit; }
     return net;
   })());
+});
+/* アプリ通知（Firebase Cloud Messaging から届く）。iPhone は届いたら必ず表示する決まり 2026-11-07 */
+self.addEventListener('push', e => {
+  let j = {}; try { j = e.data ? e.data.json() : {}; } catch (er) { j = { data: { body: e.data && e.data.text() } }; }
+  const d = j.data || {}, n = j.notification || {}; const title = d.title || n.title || 'casa シフト', body = d.body || n.body || '';
+  const link = d.link || (j.fcmOptions && j.fcmOptions.link) || n.click_action || '/casa-shift/';
+  e.waitUntil(self.registration.showNotification(title, { body, icon: '/casa-shift/icon-192.png', badge: '/casa-shift/icon-192.png', data: { link }, tag: title + body }));
+});
+self.addEventListener('notificationclick', e => {
+  e.notification.close(); const link = (e.notification.data && e.notification.data.link) || '/casa-shift/';
+  e.waitUntil((async () => { const cs = await self.clients.matchAll({ type: 'window', includeUncontrolled: true }); const base = link.split('?')[0];
+    for (const c of cs) if (c.url.split('?')[0] === base && 'focus' in c) { try { await c.navigate(link); } catch (er) {} return c.focus(); }
+    return self.clients.openWindow(link); })());
 });
