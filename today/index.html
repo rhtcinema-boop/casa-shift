@@ -40,7 +40,7 @@ main{padding:12px 16px calc(env(safe-area-inset-bottom,0px) + 24px);display:grid
   const WD = '日月火水木金土'; const pad = n => ('0' + n).slice(-2); const iso = d => d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
   const bizToday = () => { const d = new Date(); if (d.getHours() < 7) d.setDate(d.getDate() - 1); return d; }; /* 朝7時までは前の日（夜通しの営業） */
   let day = bizToday(); let data = null;
-  const clk = h => { const H = Math.floor(h), M = Math.round((h - H) * 60); return (H >= 24 ? '翌' + (H - 24) : H) + ':' + pad(M); };
+  const clk = h => { const x = h >= 24 ? h - 24 : h; return (h >= 24 ? '翌' : '') + (Number.isInteger(x) ? String(x) : x.toFixed(1)); }; /* 表記はシフト表と同じ: 13.5・翌5 */
   const lsGet = k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }; const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
   async function fromFs() { const k = lsGet('casa-admin-fsk'); if (!/^[0-9a-f]{40,}$/.test(k) || !FB || typeof DecompressionStream === 'undefined') return null;
     const res = await fetch('https://firestore.googleapis.com/v1/projects/' + FB.projectId + '/databases/(default)/documents/v/' + k + '/admin/snap?key=' + FB.apiKey); if (!res.ok) return null;
