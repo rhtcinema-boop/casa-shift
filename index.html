@@ -212,7 +212,7 @@
     },
   };
   window.claude = { use: async n => { dbg('use ' + n); return (n === 'db' ? db : n === 'user' ? user : n === 'downloads' ? downloads : null); } };
-  window.__gasDb = { get inflight() { return inflight; }, get docs() { return docs; }, get rev() { return rev; }, get writes() { return writes; }, poll, who: whoId, write: (path, data) => write({ op: 'set', path, data }), rake: tab => call('admin_rake', tab), syncNow: id => call('admin_syncNow', id), publishMeta: id => call('admin_publishMeta', id) };
+  window.__gasDb = { get inflight() { return inflight; }, get docs() { return docs; }, get rev() { return rev; }, get writes() { return writes; }, poll, who: whoId, write: (path, data) => write({ op: 'set', path, data }), rake: tab => call('admin_rake', tab), syncNow: id => call('admin_syncNow', id), publishMeta: id => call('admin_publishMeta', id), pushStatus: id => call('admin_pushStatus', id), pushTest: (id, name, text) => call('admin_pushTest', id, name, text) };
   const refreshWho = () => { const b = document.querySelector('.gas-who'); if (b) b.remove(); whoButton(); };
   const boot = async () => { if (window.__photoOnly) return; /* 写真だけの表示では名前を聞かない */
     const dk = devGet(); /* 0) 端末キー: サーバーに覚えた名前を戻す（URL の ?me= より優先。名前を変えたらキーの名前も変わるため） */
@@ -1831,6 +1831,12 @@ h4.setsec{margin:18px 0 6px;font-size:14px;font-weight:700;color:#1d2939;border-
 .ntmeta{display:grid;grid-template-columns:1fr;gap:4px;font-size:13.5px}.ntmeta>div{display:flex;align-items:center;gap:8px}.ntmeta select{font:inherit;padding:4px 8px;border-radius:8px;border:1px solid #d6dce5;background:#fff}
 .ntk{display:inline-block;min-width:3.2em;font-size:12px;font-weight:700;color:#6e6e73;letter-spacing:.04em}.ntk small{font-weight:500;margin-left:6px}
 .ntcard input[type=text]{width:100%;box-sizing:border-box;font:inherit;padding:8px 10px;border-radius:10px;border:1px solid #d6dce5;background:#fff}
+.ntrow{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:13.5px}.ntrow select{font:inherit;padding:5px 8px;border-radius:8px;border:1px solid #d6dce5;background:#fff;width:auto!important;min-width:0;max-width:100%;flex:0 1 auto;margin:0}
+.ntrem{display:grid;gap:6px;padding:10px 0;border-top:1px solid #eef0f3}.ntdel{margin-left:auto;width:30px;height:30px;border:0;border-radius:50%;background:#f2f2f7;color:#6e6e73;font-size:16px;cursor:pointer}.ntadd{justify-self:start;border:0;background:none;color:#0071e3;font:inherit;font-size:14px;font-weight:600;padding:6px 0;cursor:pointer}
+.ntsum{background:#f2f7ff;border-radius:14px;padding:12px 14px;margin:0 0 12px;display:grid;gap:6px;font-size:13.5px}.ntsum[hidden]{display:none}.ntsumt b{font-size:22px}.ntbar{height:6px;border-radius:3px;background:#dfe6f0;overflow:hidden}.ntbar i{display:block;height:100%;background:#34c759}.ntnext b{font-variant-numeric:tabular-nums}
+.ntdet{border:1px solid #e3e6ea;border-radius:14px;padding:10px 14px;margin:0 0 12px;background:#fff;font-size:13.5px}.ntdet summary{font-weight:700;font-size:15px;cursor:pointer}.ntdet summary span{font-weight:500;font-size:13px;color:#6e6e73}.nthint{font-size:12.5px;color:#6e6e73;margin:6px 0}
+.ntp{display:flex;align-items:center;gap:8px;padding:7px 0;border-top:1px solid #f0f1f4}.ntpn{flex:1;min-width:0;overflow-wrap:anywhere}.ntchip{font-size:11.5px;color:#8e8e93}.ntchip.yes{color:#248a3d;font-weight:700}
+.ntlog{display:flex;gap:8px;padding:4px 0;color:#1c1c1e}.ntlog span:first-child{font-variant-numeric:tabular-nums;color:#6e6e73}.ntlog b{margin-left:auto;font-variant-numeric:tabular-nums}
 .ntprev{display:grid;gap:4px}.ntpl{font-size:11px;color:#8e8e93;font-weight:600}.ntbub{background:#f2f2f7;border-radius:12px;padding:8px 12px;font-size:13.5px;line-height:1.45;display:grid;gap:2px;border-left:4px solid #0a84ff}.ntbub b{font-size:12px;color:#1c1c1e}
 </style>
 
@@ -3995,36 +4001,63 @@ function renderSettings() {
   if (!canW()) body.querySelectorAll('input,textarea,button').forEach(el => el.disabled = true);
 }
 
-/* スタッフへのアプリ通知の文面・タイミング（サーバーの PUSH_DEFAULTS_ と同じ初期値）2026-11-07 */
-const NOTIFY_DEF = { open: { on: true, text: '{期間}の希望を受付中（締切 {締切}）' }, fixed: { on: true, text: '{期間}のシフトが出ました' }, remind: { on: true, text: '{期間}の希望の締切は{締切}です', days: 1 }, hour: 10 };
-function notifyOf(s) { const n = s.notify || {}; return { open: { ...NOTIFY_DEF.open, ...(n.open || {}) }, fixed: { ...NOTIFY_DEF.fixed, ...(n.fixed || {}) }, remind: { ...NOTIFY_DEF.remind, ...(n.remind || {}) }, hour: n.hour != null && n.hour !== '' ? +n.hour : NOTIFY_DEF.hour }; }
-function notifyHtml(s) { const n = notifyOf(s); const h = String(n.hour).padStart(2, "0") + ":00";
-  /* 例の文: 今開いている期間の名前と締切で置き換えて見せる */
-  const sh = cur ? sheets[cur] : null; const wsh = sh ? wishSheetOf(sh) : null; const lab = sh ? lbl(sh) : "12月前半"; const dl = wsh && wsh.deadline ? wsh.deadline : ""; const dlTxt = dl ? (() => { const d = new Date(dl + "T00:00:00"); return (d.getMonth() + 1) + "/" + d.getDate() + "(" + WD[d.getDay()] + ")"; })() : "11/20(木)";
-  const ex = t => esc(String(t || "").replace(/\{期間\}/g, lab).replace(/\{締切\}/g, dlTxt));
-  const card = (key, title, when, who, extra) => `<div class="ntcard ${n[key].on ? "" : "off"}" data-nt="${key}">
-    <div class="nthead"><label class="ntsw"><input type="checkbox" id="nt_${key}_on" ${n[key].on ? "checked" : ""}><span class="ntsl"></span></label><b>${title}</b></div>
-    <div class="ntmeta"><div><span class="ntk">いつ</span><span id="nt_${key}_when">${when}</span></div><div><span class="ntk">誰に</span><span>${who}</span></div></div>
-    ${extra || ""}
-    <div class="ntk">文面 <small>{期間}{締切} は自動で入ります</small></div>
-    <input type="text" id="nt_${key}_t" value="${esc(n[key].text)}" maxlength="80">
-    <div class="ntprev"><span class="ntpl">プレビュー</span><div class="ntbub"><b>casa${esc(storeName())}</b><span id="nt_${key}_pv">${ex(n[key].text)}</span></div></div>
-  </div>`;
-  return `<h4 class="setsec" id="ntSec">スタッフへの通知 <button type="button" class="lgq" aria-label="通知の説明" onclick="event.preventDefault();toast('「通知を受け取る」をオンにしたスタッフのスマホに届きます。同じ期間・同じ種類は1回だけ送ります', 5000)">?</button></h4>
-  <div class="ntrow0"><label>送る時刻（受付開始・締切前）<select id="nt_hour">${Array.from({ length: 24 }, (_, x) => `<option value="${x}" ${x === n.hour ? "selected" : ""}>${String(x).padStart(2, "0")}:00</option>`).join("")}</select></label><span class="hint">15分おきに見回るので、実際は ${h}〜${String(n.hour).padStart(2, "0")}:15 ごろに届きます</span></div>
-  ${card("open", "希望の受付開始", "受付開始日の " + h, "通知オンの全員")}
-  ${card("remind", "締切の前", "締切の <b id=\"nt_remind_dtxt\">" + (+n.remind.days || 0) + "</b> 日前の " + h, "<b>まだ希望を出していない人だけ</b>", `<div class="ntmeta"><div><span class="ntk">何日前</span><select id="nt_remind_d">${[0,1,2,3,4,5,6,7].map(x => `<option value="${x}" ${x === (+n.remind.days || 0) ? "selected" : ""}>${x === 0 ? "締切の当日" : x + "日前"}</option>`).join("")}</select></div></div>`)}
-  ${card("fixed", "シフトの確定", "「公開する」を押した直後", "通知オンの全員")}`; }
-function wireNotify() { /* カードの見た目とプレビューを操作に合わせて更新 */
-  const sh = cur ? sheets[cur] : null; const wsh = sh ? wishSheetOf(sh) : null; const lab = sh ? lbl(sh) : "12月前半"; const dl = wsh && wsh.deadline ? wsh.deadline : ""; const dlTxt = dl ? (() => { const d = new Date(dl + "T00:00:00"); return (d.getMonth() + 1) + "/" + d.getDate() + "(" + WD[d.getDay()] + ")"; })() : "11/20(木)";
-  const hh = () => String(+($("#nt_hour")?.value || 0)).padStart(2, "0") + ":00";
-  ["open", "remind", "fixed"].forEach(k => { const on = $("#nt_" + k + "_on"), t = $("#nt_" + k + "_t"), pv = $("#nt_" + k + "_pv"), cd = document.querySelector(`.ntcard[data-nt="${k}"]`); if (!on || !t) return;
-    on.onchange = () => cd.classList.toggle("off", !on.checked);
-    t.oninput = () => { if (pv) pv.textContent = (t.value || NOTIFY_DEF[k].text).replace(/\{期間\}/g, lab).replace(/\{締切\}/g, dlTxt); }; });
-  const hr = $("#nt_hour"); if (hr) hr.onchange = () => { const w1 = $("#nt_open_when"), w2 = $("#nt_remind_when"); if (w1) w1.textContent = "受付開始日の " + hh(); if (w2) w2.innerHTML = "締切の <b id=\"nt_remind_dtxt\">" + (+($("#nt_remind_d")?.value || 0)) + "</b> 日前の " + hh(); };
-  const dd = $("#nt_remind_d"); if (dd) dd.onchange = () => { const b = $("#nt_remind_dtxt"); if (b) b.textContent = dd.value; }; }
-function readNotify() { const v = id => document.getElementById(id); const t = (k) => ({ on: !!v('nt_' + k + '_on')?.checked, text: (v('nt_' + k + '_t')?.value || '').trim() || NOTIFY_DEF[k].text });
-  return { hour: Math.max(0, Math.min(23, Math.round(+v('nt_hour')?.value || 0))), open: t('open'), fixed: t('fixed'), remind: { ...t('remind'), days: Math.max(0, Math.min(7, Math.round(+v('nt_remind_d')?.value || 0))) } }; }
+/* スタッフへのアプリ通知の設定（サーバーの pushSettings_ と同じ既定値）2026-11-07 / 細かく設定 2026-11-08: 種類ごとの時刻・送る相手、締切前は複数回、人ごとの送る/送らない */
+const NOTIFY_DEF = { open: { on: true, text: '{期間}の希望を受付中（締切 {締切}）', to: 'all' }, fixed: { on: true, text: '{期間}のシフトが出ました', to: 'all' }, remind: { on: true, text: '{期間}の希望の締切は{締切}です', days: 1, to: 'all' }, hour: 10 };
+function notifyOf(s) { const n = s.notify || {}; const hour = n.hour != null && n.hour !== '' ? +n.hour : NOTIFY_DEF.hour; const rm = { ...NOTIFY_DEF.remind, ...(n.remind || {}) };
+  const list = Array.isArray(rm.list) && rm.list.length ? rm.list.map(e => ({ days: +e.days || 0, hour: e.hour != null && e.hour !== '' ? +e.hour : hour, text: e.text || rm.text })) : [{ days: +rm.days || 0, hour, text: rm.text }];
+  const open = { ...NOTIFY_DEF.open, ...(n.open || {}) }; open.hour = open.hour != null && open.hour !== '' ? +open.hour : hour;
+  return { open, fixed: { ...NOTIFY_DEF.fixed, ...(n.fixed || {}) }, remind: { ...rm, list }, hour, skip: Array.isArray(n.skip) ? n.skip : [] }; }
+function ntCtx() { const sh = cur ? sheets[cur] : null; const wsh = sh ? wishSheetOf(sh) : null; const lab = sh ? lbl(sh) : "12月前半"; const dl = wsh && wsh.deadline ? wsh.deadline : ""; const dlTxt = dl ? (() => { const d = new Date(dl + "T00:00:00"); return (d.getMonth() + 1) + "/" + d.getDate() + "(" + WD[d.getDay()] + ")"; })() : "11/20(木)"; return { fill: t => String(t || "").replace(/\{期間\}/g, lab).replace(/\{締切\}/g, dlTxt) }; }
+const ntHourOpts = v => Array.from({ length: 24 }, (_, x) => `<option value="${x}" ${x === +v ? "selected" : ""}>${String(x).padStart(2, "0")}:00</option>`).join("");
+const ntToOpts = (v, extra) => [["all", "全員"], ["emp", "社員だけ"], ["part", "社員以外"]].map(([k, l]) => `<option value="${k}" ${k === (v || "all") ? "selected" : ""}>${l}${extra || ""}</option>`).join("");
+const ntDayOpts = v => [0, 1, 2, 3, 4, 5, 6, 7].map(x => `<option value="${x}" ${x === +v ? "selected" : ""}>${x === 0 ? "締切の当日" : "締切の" + x + "日前"}</option>`).join("");
+function ntRemRow(e) { return `<div class="ntrem"><div class="ntrow"><select class="nt-rd" aria-label="何日前">${ntDayOpts(e.days)}</select><select class="nt-rh" aria-label="時刻">${ntHourOpts(e.hour)}</select><button type="button" class="ntdel" aria-label="この回を消す">×</button></div><input type="text" class="nt-rt" value="${esc(e.text)}" maxlength="80" aria-label="文面"><div class="ntbub"><b>casa${esc(storeName())}</b><span class="nt-rp">${esc(ntCtx().fill(e.text))}</span></div></div>`; }
+function notifyHtml(s) { const n = notifyOf(s); const x = ntCtx();
+  const head = (key, title) => `<div class="nthead"><label class="ntsw"><input type="checkbox" id="nt_${key}_on" ${n[key].on ? "checked" : ""}><span class="ntsl"></span></label><b>${title}</b></div>`;
+  const textBox = key => `<div class="ntk">文面</div><input type="text" id="nt_${key}_t" value="${esc(n[key].text)}" maxlength="80"><div class="ntbub"><b>casa${esc(storeName())}</b><span id="nt_${key}_pv">${esc(x.fill(n[key].text))}</span></div>`;
+  const staff = activeStaff().filter(st => !st.placeholder); const skip = new Set(n.skip);
+  return `<h4 class="setsec" id="ntSec">スタッフへの通知 <button type="button" class="lgq" aria-label="通知の説明" onclick="event.preventDefault();toast('通知をオンにしたスタッフのスマホに届きます。文面の {期間}{締切} は自動で入ります。同じ通知は期間ごとに1回だけです。実際に届くのは指定の時刻から15分以内です', 6000)">?</button></h4>
+  <div class="ntsum" id="ntSum" hidden></div>
+  <div class="ntcard ${n.open.on ? "" : "off"}" data-nt="open">${head("open", "希望の受付開始")}
+    <div class="ntrow"><span class="ntk">いつ</span><span>受付開始日の</span><select id="nt_open_h">${ntHourOpts(n.open.hour)}</select></div>
+    <div class="ntrow"><span class="ntk">誰に</span><select id="nt_open_to">${ntToOpts(n.open.to)}</select></div>${textBox("open")}</div>
+  <div class="ntcard ${n.remind.on ? "" : "off"}" data-nt="remind">${head("remind", "締切の前")}
+    <div class="ntrow"><span class="ntk">誰に</span><select id="nt_remind_to">${ntToOpts(n.remind.to, "（未提出の人だけ）")}</select></div>
+    <div id="ntRems">${n.remind.list.map(ntRemRow).join("")}</div><button type="button" class="ntadd" id="ntRemAdd">＋ 回を増やす</button></div>
+  <div class="ntcard ${n.fixed.on ? "" : "off"}" data-nt="fixed">${head("fixed", "シフトの確定")}
+    <div class="ntrow"><span class="ntk">いつ</span><span>「公開」を押した直後</span></div>
+    <div class="ntrow"><span class="ntk">誰に</span><select id="nt_fixed_to">${ntToOpts(n.fixed.to)}</select></div>${textBox("fixed")}</div>
+  <details class="ntdet" id="ntPeople"><summary>人ごとの設定<span id="ntPeopleN"></span></summary>
+    <div class="nthint">スイッチを切ると、その人には送りません</div>
+    ${staff.map(st => `<div class="ntp" data-name="${esc(st.name)}"><span class="ntpn">${esc(st.name)}</span><span class="ntchip" data-chip></span><label class="ntsw"><input type="checkbox" data-ntp="${esc(st.id)}" ${skip.has(st.id) ? "" : "checked"}><span class="ntsl"></span></label></div>`).join("")}<div id="ntOther"></div></details>
+  <details class="ntdet" id="ntTest"><summary>試しに送る</summary>
+    <div class="nthint">選んだ1人のスマホにだけ、【テスト】を付けて届きます</div>
+    <div class="ntrow"><select id="ntTestWho" aria-label="送る相手"><option value="">通知オンの人を選ぶ</option></select><select id="ntTestKind" aria-label="送る通知"><option value="open">受付開始</option><option value="remind">締切の前</option><option value="fixed">確定</option></select><button type="button" class="btn small" id="ntTestGo" disabled>送る</button></div></details>
+  <details class="ntdet" id="ntLog"><summary>送った履歴</summary><div id="ntLogBody" class="nthint">まだありません</div></details>`; }
+function ntDay(iso) { const d = new Date(iso + "T00:00:00"); return (d.getMonth() + 1) + "/" + d.getDate() + "(" + WD[d.getDay()] + ")"; }
+const NT_KIND = { open: "受付開始", remind: "締切の前", fixed: "確定" };
+async function ntLoadStatus() { const api = window.__gasDb && window.__gasDb.pushStatus; if (!api) return; const forStore = storeId; let r; try { r = await api(storeId); } catch (e) { return; } if (!r || !r.hub || forStore !== storeId || !$("#ntSum")) return;
+  const on = (r.staff || []).filter(x => x.devices > 0), by = {}; (r.staff || []).forEach(x => { by[x.name] = x; }); const total = (r.staff || []).length;
+  const sum = $("#ntSum"); sum.hidden = false; const pct = total ? Math.round(on.length / total * 100) : 0;
+  sum.innerHTML = `<div class="ntsumt"><b>${on.length}</b> / ${total}人が通知オン</div><div class="ntbar"><i style="width:${pct}%"></i></div>` + ((r.next || []).length ? `<div class="ntk">次に送る</div>` + r.next.slice(0, 3).map(x => `<div class="ntnext"><b>${ntDay(x.at)} ${String(x.hour).padStart(2, "0")}:00</b> ${esc(x.label)} ${NT_KIND[x.kind] || ""}</div>`).join("") : `<div class="nthint">予定している通知はありません</div>`);
+  document.querySelectorAll("#ntPeople .ntp").forEach(row => { const st = by[row.dataset.name]; const c = row.querySelector("[data-chip]"); const yes = st && st.devices > 0; c.textContent = yes ? "受取オン" : "未設定"; c.classList.toggle("yes", !!yes); });
+  const pn = $("#ntPeopleN"); if (pn) pn.textContent = ` ${on.length}/${total}人オン`;
+  const other = $("#ntOther"); if (other) other.innerHTML = (r.other || []).length ? `<div class="nthint">名簿にない端末: ${r.other.map(esc).join("・")}</div>` : "";
+  const who = $("#ntTestWho"), go = $("#ntTestGo"); if (who) { who.innerHTML = '<option value="">通知オンの人を選ぶ</option>' + on.map(x => `<option value="${esc(x.name)}">${esc(x.name)}</option>`).join(""); who.onchange = () => { if (go) go.disabled = !who.value || !canW(); }; }
+  const lg = $("#ntLogBody"); if (lg && (r.log || []).length) lg.innerHTML = r.log.map(x => { const d = new Date(x.at); return `<div class="ntlog"><span>${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}</span><span>${esc(x.label || "")} ${NT_KIND[x.kind] || ""}</span><b>${x.sent}/${x.to}台</b></div>`; }).join(""); }
+function wireNotify() { /* 操作に合わせて見た目とプレビューを更新。状態（誰がオンか等）は裏で読んで後から埋める */
+  const x = ntCtx();
+  ["open", "remind", "fixed"].forEach(k => { const on = $("#nt_" + k + "_on"), cd = document.querySelector(`.ntcard[data-nt="${k}"]`); if (on && cd) on.onchange = () => cd.classList.toggle("off", !on.checked); const t = $("#nt_" + k + "_t"), pv = $("#nt_" + k + "_pv"); if (t && pv) t.oninput = () => { pv.textContent = x.fill(t.value || NOTIFY_DEF[k].text); }; });
+  const box = $("#ntRems"), add = $("#ntRemAdd"); const refresh = () => { const rows = box.querySelectorAll(".ntrem"); rows.forEach(r => { r.querySelector(".ntdel").hidden = rows.length < 2; }); if (add) add.hidden = rows.length >= 5; };
+  const wire = r => { const t = r.querySelector(".nt-rt"), p = r.querySelector(".nt-rp"); t.oninput = () => { p.textContent = x.fill(t.value || NOTIFY_DEF.remind.text); }; r.querySelector(".ntdel").onclick = () => { r.remove(); refresh(); }; };
+  if (box) { box.querySelectorAll(".ntrem").forEach(wire); refresh(); }
+  if (add) add.onclick = () => { const rows = box.querySelectorAll(".ntrem"); const last = rows[rows.length - 1]; const d = last ? Math.max(0, +last.querySelector(".nt-rd").value - 1) : 0; const tmp = document.createElement("div"); tmp.innerHTML = ntRemRow({ days: d, hour: last ? +last.querySelector(".nt-rh").value : NOTIFY_DEF.hour, text: last ? last.querySelector(".nt-rt").value : NOTIFY_DEF.remind.text }); const r = tmp.firstElementChild; box.appendChild(r); wire(r); refresh(); };
+  const go = $("#ntTestGo"); if (go) go.onclick = async () => { const who = $("#ntTestWho").value, k = $("#ntTestKind").value; if (!who) return; const src = k === "remind" ? document.querySelector("#ntRems .nt-rt") : $("#nt_" + k + "_t"); go.disabled = true; try { const r = await window.__gasDb.pushTest(storeId, who, x.fill(src ? src.value : "")); toast(r && r.sent ? `${who} に送りました` : `${who} に届きませんでした（端末の登録を確認）`, 4000); } catch (e) { toast("送れませんでした: " + (e.message || e), 4000); } go.disabled = false; };
+  ntLoadStatus(); }
+function readNotify() { const v = id => document.getElementById(id); const hr = (id, d) => { const n = parseInt(v(id)?.value, 10); return isNaN(n) ? d : Math.max(0, Math.min(23, n)); }; const t = k => ({ on: !!v('nt_' + k + '_on')?.checked, text: (v('nt_' + k + '_t')?.value || '').trim() || NOTIFY_DEF[k].text, to: v('nt_' + k + '_to')?.value || 'all' });
+  const list = [...document.querySelectorAll('#ntRems .ntrem')].map(r => ({ days: Math.max(0, Math.min(7, +r.querySelector('.nt-rd').value || 0)), hour: hr0(r.querySelector('.nt-rh').value), text: r.querySelector('.nt-rt').value.trim() || NOTIFY_DEF.remind.text })); function hr0(x) { const n = parseInt(x, 10); return isNaN(n) ? NOTIFY_DEF.hour : Math.max(0, Math.min(23, n)); }
+  const first = list[0] || { days: 1, hour: NOTIFY_DEF.hour, text: NOTIFY_DEF.remind.text }; const openH = hr('nt_open_h', NOTIFY_DEF.hour);
+  return { hour: openH, open: { ...t('open'), hour: openH }, fixed: t('fixed'), remind: { on: !!v('nt_remind_on')?.checked, to: v('nt_remind_to')?.value || 'all', text: first.text, days: first.days, list }, skip: [...document.querySelectorAll('[data-ntp]')].filter(c => !c.checked).map(c => c.dataset.ntp) }; }
 // ---------- boot ----------
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { document.querySelectorAll('.drawer.open').forEach(d => d.classList.remove('open')); document.querySelectorAll('.pop').forEach(p => p.remove()); const ph = $('.photo'); if (ph) ph.remove(); } });
 document.body.dataset.view = 'grid';
