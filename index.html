@@ -2947,7 +2947,7 @@ async function drawShiftImage(sh, day, layout) {
   if (wish) { const tx = '希望（確定シフトではありません）'; g.font = F(700, 24); const tw = g.measureText(tx).width; g.fillStyle = '#fef7e0'; g.fillRect(W - pad - tw - 28, 36, tw + 28, 46); g.strokeStyle = '#f29900'; g.lineWidth = 2; g.strokeRect(W - pad - tw - 28, 36, tw + 28, 46); g.fillStyle = '#b06000'; g.fillText(tx, W - pad - tw - 14, 68); }
   const hc = headcount(sh, day);
   if (memo) { g.fillStyle = '#fff2cc'; g.fillRect(pad, 94, W - pad * 2, 50); g.fillStyle = '#000'; g.font = F(500, 24); g.fillText('📝 ' + memo.replace(/\s+/g, ' ').slice(0, 42), pad + 14, 128); }
-  const vr = viewRange(settings, d); let t0 = Math.min(Math.max(vr.vf, 17), ...rows.map(r => Math.floor(r.c.s))), t1 = Math.max(Math.min(vr.vt, 31), ...rows.map(r => Math.ceil(r.c.e)));
+  const vr = viewRange(settings, d); let t0 = Math.min(Math.max(vr.vf, 17), ...rows.map(r => Math.floor(r.c.s))), t1 = rows.length ? Math.max(...rows.map(r => r.c.e)) : Math.min(vr.vt, 31); /* 右端はその日の一番遅い終わり（誰もいない時間を出さない。オーナー指示 2026-11-09） */
   t0 = Math.max(OPEN, t0); t1 = Math.min(CLOSE, t1);
   const nameW = tall ? 0 : 200, timeW = tall ? 0 : 190; const gx = pad + nameW + timeW, gw = W - pad - gx; const px = t => gx + (t - t0) / (t1 - t0) * gw;
   const heatY = headH; const top = headH + heatH + heatGap; const lf = settings.lateFrom || 22;
