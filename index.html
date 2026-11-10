@@ -1602,6 +1602,13 @@ body.dark .grid td.has.rl-cl,body.dark .grid td.has.c-t.close{background:#6b1a14
 .rolebar button.ld{color:#0b57d0}.rolebar button.ld.on{background:#0b57d0;color:#fff;border-color:#0b57d0}.rolebar button.ld.on i{background:#fff;border-color:#fff}.rolebar button.ld.on i::after{border-color:#0b57d0}
 .rolebar button.cl{color:#c5221f}.rolebar button.cl.on{background:#c5221f;color:#fff;border-color:#c5221f}.rolebar button.cl.on i{background:#fff;border-color:#fff}.rolebar button.cl.on i::after{border-color:#c5221f}
 .rolebar button:disabled{opacity:.45;cursor:default}
+.rolebar button.who{color:#1f1f1f}
+.whopop{padding:12px;gap:8px;min-width:0}.whopop>b{font-size:14px}.whopop input{width:100%;box-sizing:border-box}
+.whopop .wp-list{max-height:280px;overflow:auto;display:flex;flex-direction:column;gap:2px}
+.whopop .wp-list button{display:flex;justify-content:space-between;align-items:center;gap:8px;border:0;background:none;border-radius:8px;padding:9px 10px;font:600 14px var(--font);color:inherit;text-align:left;cursor:pointer}
+.whopop .wp-list button:hover:not(:disabled){background:rgba(11,87,208,.08)}.whopop .wp-list button small{font-weight:500;color:#5f6368;font-size:12px}.whopop .wp-list button:disabled{opacity:.45;cursor:default}
+.es-wholab{display:flex;align-items:center;gap:10px;font-size:14px;color:#5f6368}.es-wholab .es-who{flex:1}
+body.dark .rolebar button.who{color:#f2f4f7}body.dark .whopop .wp-list button small{color:#9aa0a6}
 body.dark .rolebar{background:rgba(44,44,46,.97);border-color:#48484a}body.dark .rolebar button{background:#1c1c1e;border-color:#48484a}
 body.dark .rolebar button.ld{color:#a8c7fa}body.dark .rolebar button.cl{color:#ffb4ab}
 body.dark .rolebar button.ld.on{background:#0b57d0;color:#fff}body.dark .rolebar button.cl.on{background:#b3261e;color:#fff}
@@ -2648,10 +2655,11 @@ function showRoleBar() {
   if (!b) { b = document.createElement('div'); b.id = 'rolebar'; b.className = 'rolebar'; b.setAttribute('role', 'group'); b.setAttribute('aria-label', '役割'); document.body.appendChild(b);
     b.addEventListener('pointerdown', e => e.preventDefault());
     b.onclick = e => { const t = e.target.closest('[data-role]'); if (!t || !editing || t.disabled) return; const k = editing.k; const cc = sheets[cur].cells[k]; if (!cc) return; const nx = Object.assign({}, cc);
+      if (t.dataset.role === 'who') { finishEdit(true); if (editing) return; openWhoPop(k); return; } /* 打ちかけの時間を先に保存してから */
       if (t.dataset.role === 'ld') { if (nx.ld) delete nx.ld; else nx.ld = true; } else nx.cl = !isClose(cc);
       commit(k, nx); setTimeout(showRoleBar, 0); }; }
-  b.innerHTML = `<button type="button" data-role="ld" class="ld ${isLead(c) ? 'on' : ''}" aria-pressed="${isLead(c)}" ${has ? '' : 'disabled'}><i></i>時間帯責任者</button><button type="button" data-role="cl" class="cl ${has && isClose(c) ? 'on' : ''}" aria-pressed="${!!has && isClose(c)}" ${has ? '' : 'disabled'}><i></i>締め</button>`;
-  const r = editing.td.getBoundingClientRect(); const w = 200; b.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left)) + 'px'; b.style.top = Math.min(innerHeight - 44, r.bottom + 4) + 'px';
+  b.innerHTML = `<button type="button" data-role="ld" class="ld ${isLead(c) ? 'on' : ''}" aria-pressed="${isLead(c)}" ${has ? '' : 'disabled'}><i></i>時間帯責任者</button><button type="button" data-role="cl" class="cl ${has && isClose(c) ? 'on' : ''}" aria-pressed="${!!has && isClose(c)}" ${has ? '' : 'disabled'}><i></i>締め</button>${sheets[cur]?.phase === 'draft' ? `<button type="button" data-role="who" class="who" ${has ? '' : 'disabled'}>名前を変更</button>` : ''}`;
+  const r = editing.td.getBoundingClientRect(); const w = b.offsetWidth || 200; b.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left)) + 'px'; b.style.top = Math.min(innerHeight - 44, r.bottom + 4) + 'px';
 }
 function cellErr(ed, msg) {
   editing = ed; ed.td.classList.remove('bad'); void ed.td.offsetWidth; ed.td.classList.add('bad'); ed.inp.focus();
@@ -2727,7 +2735,7 @@ function openDayView(d0, fromEl) {
     const staff = activeStaff(sh).filter(st => !st.placeholder); const k = k0 || null; const c0 = k ? sh.cells[k] : null; const c = c0 || suggest || null; const st = k ? staff.find(x => x.id === k.split('|')[0]) : null;
     const es = document.createElement('div'); es.className = 'dv-sheet'; es.setAttribute('role', 'dialog'); es.setAttribute('aria-label', 'シフトを編集');
     es.innerHTML = `<div class="grab"></div><div class="es-head"><b>${st ? esc(st.name) : 'シフトを追加'}</b><span>${dateOf(sh, d).getMonth() + 1}月${dateOf(sh, d).getDate()}日</span></div>
-      ${st ? '' : `<select class="es-who" aria-label="スタッフ">${staff.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select>`}
+      ${st ? (c0 && sh.phase === 'draft' ? `<label class="es-wholab">名前<select class="es-who es-mv" aria-label="名前を変更"><option value="${st.id}" selected>${esc(st.name)}</option>${whoChoices(sh, k).map(x => `<option value="${x.st.id}" ${x.busy || x.off ? 'disabled' : ''}>${esc(x.st.name)}${whoNote(x) ? '（' + esc(whoNote(x)) + '）' : ''}</option>`).join('')}</select></label>` : '') : `<select class="es-who" aria-label="スタッフ">${staff.map(x => `<option value="${x.id}">${esc(x.name)}</option>`).join('')}</select>`}
       <div class="es-row"><label>開始<input class="es-s" inputmode="decimal" enterkeyhint="next" value="${c ? fmtT(c.s) : ''}" placeholder="18"></label><span class="es-dash">–</span><label>終了<input class="es-e" inputmode="decimal" enterkeyhint="done" value="${c ? fmtT(c.e) : ''}" placeholder="23"></label></div>
   <div class="es-roles"><button type="button" class="es-role ld ${c && isLead(c) ? 'on' : ''}" data-role="ld" aria-pressed="${!!(c && isLead(c))}">時間帯責任者</button><button type="button" class="es-role cl ${c && full(c) && isClose(c) ? 'on' : ''}" data-role="cl" aria-pressed="${!!(c && full(c) && isClose(c))}">締め</button></div>
       ${(() => { const ww = wishSheetOf(sh); const w = ww && st ? ww.cells[st.id + '|' + d] : null; if (!ww || !st) return ''; const cls = !full(w) ? 'nw' : c && full(c) && (c.s < w.s || c.e > w.e) ? 'out' : 'in'; return `<p class="es-wish ${cls}">${full(w) ? '希望 ' + fmtT(w.s) + '–' + fmtT(w.e) : '希望なし'}${suggest ? ' / 提案 ' + fmtT(suggest.s) + '–' + fmtT(suggest.e) : ''}</p>`; })()}
@@ -2736,10 +2744,10 @@ function openDayView(d0, fromEl) {
     ov.appendChild(es); requestAnimationFrame(() => es.classList.add('in')); setTimeout(() => es.querySelector('.es-s').focus(), calm() ? 0 : 230);
     const shut = () => { es.classList.remove('in'); setTimeout(() => es.remove(), calm() ? 0 : 160); if (vvFix) { visualViewport.removeEventListener('resize', vvFix); visualViewport.removeEventListener('scroll', vvFix); } };
     const vvFix = window.visualViewport ? () => { const off = Math.max(0, innerHeight - (visualViewport.height + visualViewport.offsetTop)); es.style.bottom = (off ? off + 8 : 0) + 'px'; } : null; if (vvFix) { visualViewport.addEventListener('resize', vvFix); visualViewport.addEventListener('scroll', vvFix); }
-    const initS = es.querySelector('.es-s').value, initE = es.querySelector('.es-e').value; const dirty = () => es.querySelector('.es-s').value !== initS || es.querySelector('.es-e').value !== initE || !!suggest;
+    const initS = es.querySelector('.es-s').value, initE = es.querySelector('.es-e').value; const dirty = () => es.querySelector('.es-s').value !== initS || es.querySelector('.es-e').value !== initE || !!suggest || (!!es.querySelector('.es-mv') && es.querySelector('.es-mv').value !== st.id);
     const ask = (msg, okLabel, danger, fn) => { const dim = document.createElement('div'); dim.className = 'alert-dim'; dim.innerHTML = `<div class="ios-alert" role="alertdialog" aria-modal="true" aria-label="${okLabel}の確認"><p>${msg}</p><div><button class="cf-no">キャンセル</button><button class="cf-yes ${danger ? 'danger' : ''}">${okLabel}</button></div></div>`; ov.appendChild(dim); requestAnimationFrame(() => dim.classList.add('in')); const off = () => { dim.classList.remove('in'); setTimeout(() => dim.remove(), calm() ? 0 : 180); }; dim.querySelector('.cf-no').onclick = off; dim.querySelector('.cf-yes').onclick = () => { off(); fn(); }; dim.addEventListener('keydown', e => { if (e.key === 'Escape') { e.stopPropagation(); off(); } }); dim.querySelector('.cf-no').focus(); };
     let saving = false;
-    const save = v => { if (saving) return; saving = true; const btn = es.querySelector('.es-save'); btn.classList.add('busy'); const kk = k || (es.querySelector('.es-who').value + '|' + d); const before = sh.cells[kk] || null; commit(kk, v); paint(); shut(); if (v === null && before) undoBar(`${st ? st.name : ''}の${dateOf(sh, d).getMonth() + 1}月${dateOf(sh, d).getDate()}日を削除しました`); else toast(localMode ? 'この端末に保存しました' : '保存しました'); };
+    const save = v => { if (saving) return; saving = true; const btn = es.querySelector('.es-save'); btn.classList.add('busy'); const mv = es.querySelector('.es-mv'); if (k && mv && v && mv.value !== st.id) { const err = moveShiftTo(k, mv.value, v); if (err) { saving = false; btn.classList.remove('busy'); const p = es.querySelector('.es-err'); p.textContent = err; return; } paint(); shut(); return; } const kk = k || (es.querySelector('.es-who').value + '|' + d); const before = sh.cells[kk] || null; commit(kk, v); paint(); shut(); if (v === null && before) undoBar(`${st ? st.name : ''}の${dateOf(sh, d).getMonth() + 1}月${dateOf(sh, d).getDate()}日を削除しました`); else toast(localMode ? 'この端末に保存しました' : '保存しました'); };
     es.querySelector('.es-cancel').onclick = () => { if (dirty()) ask('変更を破棄しますか？', '破棄', true, shut); else shut(); };
     es.querySelector('.es-del')?.addEventListener('click', () => ask(`${esc(st ? st.name : '')}の${dateOf(sh, d).getMonth() + 1}月${dateOf(sh, d).getDate()}日の勤務を<br>削除しますか？`, '削除', true, () => save(null)));
     es.querySelector('.es-save').onclick = () => { const ps = parseEntry(es.querySelector('.es-s').value, 's'), pe = parseEntry(es.querySelector('.es-e').value, 'e'); const err = ps.err || pe.err; const out = m => { saving = false; es.querySelector('.es-save').classList.remove('busy'); const p = es.querySelector('.es-err'); p.textContent = m; es.classList.remove('bad'); void es.offsetWidth; es.classList.add('bad'); };
@@ -2781,6 +2789,32 @@ function finishEdit(save, move) { setTimeout(() => { if (!editing) { hideKbar();
   } else render();
   if (move) { const n = neighbour(k, f, move[0], move[1]); if (n) { const td = tdAt(n.k, n.f); if (td) { revealCell(td); selectCell(n.k, n.f, true); } } else selectCell(k, f, true); }
   if (!move && !editing) selectCell(k, f, true);
+}
+/* 作成中のマスの名前を変える＝その日の勤務を別の人へ移す（オーナー指示 2026-11-10）。v を渡すと時間も同時に直す。戻り値はエラー文（空なら成功） */
+function whoChoices(sh, k) { const [from, d] = k.split('|'); const w = wishSheetOf(sh);
+  return activeStaff(sh).filter(st => !st.placeholder && st.id !== from).map(st => { const nk = st.id + '|' + d; const c = sh.cells[nk]; const busy = !!(c && (c.s != null || c.e != null || c.off)); const off = wishOffAt(sh, nk); const wc = w ? w.cells[nk] : null; const wish = full(wc) ? fmtT(wc.s) + '–' + fmtT(wc.e) : '';
+    return { st, busy, off, wish, rank: busy || off ? 3 : wish ? 0 : 1 }; }).sort((a, b) => a.rank - b.rank); }
+function whoNote(x) { return x.busy ? '勤務あり' : x.off ? '休み希望' : x.wish ? '希望 ' + x.wish : ''; }
+function moveShiftTo(k, sid, v) {
+  const sh = sheets[cur]; if (!sh || sh.phase !== 'draft' || !canW()) return '作成中だけ名前を変えられます';
+  const [from, d] = k.split('|'); const c = sh.cells[k]; if (!c || (c.s == null && c.e == null)) return '勤務が入っていません'; if (sid === from) return '';
+  const nk = sid + '|' + d; const tg = sh.cells[nk] || null; const st = (config.staff || []).find(x => x.id === sid), st0 = (config.staff || []).find(x => x.id === from); if (!st) return 'スタッフが見つかりません';
+  if (tg && (tg.s != null || tg.e != null || tg.off)) return st.name + 'さんはこの日すでに入っています'; if (wishOffAt(sh, nk)) return st.name + 'さんはこの日休み希望です';
+  const nv = norm(JSON.parse(JSON.stringify(v || c))); const t = Date.now(); presLastEdit = t;
+  store.patchCells(cur, { [k]: null, [nk]: nv }); store.appendHistory(cur, [{ t, who: myId, k, from: c, to: null }, { t, who: myId, k: nk, from: tg, to: nv }]);
+  undoBar((st0 ? st0.name : '') + ' → ' + st.name + ' に変えました'); return ''; }
+function openWhoPop(k) { /* 表のマス（PC・スマホの表）から: 名前を選ぶ小窓 */
+  document.querySelectorAll('.whopop').forEach(x => x.remove()); const sh = sheets[cur]; if (!sh) return; const [from, d] = k.split('|'); const st0 = (config.staff || []).find(x => x.id === from); const list = whoChoices(sh, k);
+  const p = document.createElement('div'); p.className = 'pop whopop'; p.setAttribute('role', 'dialog'); p.setAttribute('aria-label', '名前を変更');
+  p.innerHTML = `<b>${esc(st0 ? st0.name : '')}の${dateOf(sh, +d).getMonth() + 1}/${dateOf(sh, +d).getDate()}を誰にする？</b><input type="search" placeholder="名前で探す" aria-label="名前で探す"><div class="wp-list">${list.map(x => `<button type="button" data-sid="${x.st.id}" data-name="${esc(x.st.name)}" ${x.busy || x.off ? 'disabled' : ''}><span>${esc(x.st.name)}</span><small>${esc(whoNote(x))}</small></button>`).join('') || '<p class="hint">ほかにスタッフがいません</p>'}</div>`;
+  document.body.appendChild(p); const td = tdAt(k, 's') || tdAt(k, 'e'); const r = td ? td.getBoundingClientRect() : { left: 20, bottom: 80 }; const pw = Math.min(300, innerWidth - 16);
+  p.style.position = 'fixed'; p.style.zIndex = 75; p.style.width = pw + 'px'; p.style.left = Math.max(8, Math.min(innerWidth - pw - 8, r.left)) + 'px'; const top = r.bottom + 4; p.style.top = Math.max(8, Math.min(top, innerHeight - 380)) + 'px';
+  const shut = () => { p.remove(); document.removeEventListener('pointerdown', off, true); document.removeEventListener('keydown', esc_, true); };
+  const off = e => { if (!p.contains(e.target)) shut(); }; const esc_ = e => { if (e.key === 'Escape') { e.stopPropagation(); shut(); } };
+  setTimeout(() => { document.addEventListener('pointerdown', off, true); document.addEventListener('keydown', esc_, true); }, 0);
+  const q = p.querySelector('input'); q.oninput = () => { const s = q.value.trim(); p.querySelectorAll('.wp-list button').forEach(b => { b.hidden = !!s && !b.dataset.name.includes(s); }); };
+  if (!matchMedia('(pointer:coarse)').matches) q.focus();
+  p.querySelectorAll('.wp-list button').forEach(b => b.onclick = () => { const err = moveShiftTo(k, b.dataset.sid); shut(); if (err) toast(err, true); else { const td2 = tdAt(b.dataset.sid + '|' + d, 's'); if (td2) { revealCell(td2); selectCell(b.dataset.sid + '|' + d, 's', true); } } });
 }
 function commit(k, v) {
   const sh = sheets[cur]; presLastEdit = Date.now(); const old = sh.cells[k] || null; v = norm(v);
