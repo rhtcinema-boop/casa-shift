@@ -175,7 +175,7 @@
 /* 書く前に手元の docs にも先に反映する（2026-11-07）: 保存が返るまでの数秒間に他の返事（マスの保存・在席・ウィジェット）で一覧を作り直すと、並べ替え（order/sortKey）が手元から消えて表が元に戻っていた。サーバーの merge_ と同じ合成（入れ子は中身ごと・null は削除・配列は丸ごと） */
   const mergeLocal = (t, s) => { for (const k in s) { const v = s[k]; if (v === null) { delete t[k]; continue; } if (v && typeof v === 'object' && !Array.isArray(v) && t[k] && typeof t[k] === 'object' && !Array.isArray(t[k])) mergeLocal(t[k], v); else t[k] = clone(v); } };
   function applyLocal(op) { const p = op.path; if (op.op === 'delete') { if (p in docs) { delete docs[p]; delete vers[p]; } return; } if (op.op === 'set') { docs[p] = clone(op.data == null ? {} : op.data); return; } if (op.op === 'update' && p in docs) mergeLocal(docs[p], op.data || {}); }
-  async function write(op) { await ensure(); writes++; inflight++; (window.__wlog = window.__wlog || []).push({ p: op.path, t: Date.now(), call: 1 }); try { applyLocal(op); } catch (e) { dbg('applyLocal ' + (e && e.message)); } try { const r = await call('admin_write', [op]); const ch = apply(r); notify(ch); snapSave(); } finally { inflight--; } }
+  async function write(op) { await ensure(); writes++; inflight++; (window.__wlog = window.__wlog || []).push({ p: op.path, t: Date.now(), call: 1 }); try { applyLocal(op); } catch (e) { dbg('applyLocal ' + (e && e.message)); } try { const r = await call('admin_write', [op]); const ch = apply(r); notify(ch); snapSave(); } catch (e) { /* 保存できなかった時は、先に手元へ入れた内容をサーバーの内容に戻す（2026-11-13: 上野で公開が保存されていないのに店長の画面は「公開中」のままだった） */ dbg('write fail ' + op.path + ' ' + (e && e.message)); try { const r2 = await call('admin_get', op.path); delete vers[op.path]; const ch2 = apply({ docs: { [op.path]: r2 } }); if (ch2.length) notify(ch2); snapSave(); } catch (e2) { dbg('revert fail ' + (e2 && e2.message)); } throw e; } finally { inflight--; } }
   async function fetchOne(p) { if (fetched.has(p)) return; fetched.add(p); try { const r = await call('admin_get', p); const ch = apply({ docs: { [p]: r } }); if (ch.length) notify(ch); } catch (e) { fetched.delete(p); throw e; } }
   const needFetch = p => !(p in docs) && p.indexOf('history/') === 0 && !fetched.has(p);
   const doc = p => ({
@@ -2063,8 +2063,10 @@ const store = {
     if (localMode) { const d = this._local(); d.sheets[id] = sheets[id]; this._save(d); render(); return; }
     render();
     const pf = pendingFields[id] = pendingFields[id] || {}; const mineF = {}; for (const f in fields) { mineF[f] = fields[f] === undefined ? null : fields[f]; pf[f] = mineF[f]; }
-    try { await inOrder('sheets/' + id, () => dbApi.doc('sheets/' + id).update(send)); } catch (e) { console.error(e); toast('保存できませんでした: ' + (e.code || e.message), true); }
-    finally { setTimeout(() => { for (const f in mineF) if (pf[f] === mineF[f]) delete pf[f]; if (!Object.keys(pf).length) delete pendingFields[id]; }, 0); }
+    let ok = true; try { await inOrder('sheets/' + id, () => dbApi.doc('sheets/' + id).update(send)); } catch (e) { ok = false; console.error(e); toast('保存できませんでした: ' + (e.code || e.message), true); }
+    finally { setTimeout(() => { for (const f in mineF) if (pf[f] === mineF[f]) delete pf[f]; if (!Object.keys(pf).length) delete pendingFields[id];
+      if (!ok && serverSheets[id]) { /* 失敗したら画面もサーバーの内容に戻す（2026-11-13） */ const fresh = JSON.parse(JSON.stringify(serverSheets[id])); for (const f in (pendingFields[id] || {})) { const v = pendingFields[id][f]; if (v === null) delete fresh[f]; else fresh[f] = JSON.parse(JSON.stringify(v)); } sheets[id] = fresh; render(); } }, 0); }
+    return ok;
   },
   subscribeHistory(id) {
     if (unsubHist) { unsubHist(); unsubHist = null; }
@@ -2939,7 +2941,7 @@ function openPublish(anchor) {
       const box = $('#pbNow', pop); box.classList.add('ask'); $('#pbAuto', pop).hidden = true;
       box.innerHTML = `<div class="pbq">${esc(lbl(sh))}の確定シフトを公開しますか？</div><div class="pbnote">公開するとスタッフがシフトを確認できます${sh.announce ? '（自動公開日は解除）' : ''}。</div><div class="pbbtns"><button class="btn" id="pbNo">やめる</button><button class="btn primary" id="pbYes">公開する</button></div>`;
       $('#pbNo', pop).onclick = () => pop.remove(); $('#pbYes', pop).focus();
-      $('#pbYes', pop).onclick = () => { $('#pbYes', pop).disabled = true; store.patchSheet(sh.id, { published: true, announce: '' }); toast('公開しました。スタッフ用ページに反映中…'); setTimeout(() => { try { kickSyncAfterChange(); } catch (e) {} }, 300); pop.remove(); };
+      $('#pbYes', pop).onclick = async () => { const yb = $('#pbYes', pop); yb.disabled = true; yb.textContent = '公開中…'; const ok = await store.patchSheet(sh.id, { published: true, announce: '' }); pop.remove(); if (ok === false) { toast('公開できませんでした。通信を確かめて、もう一度「今すぐ公開」を押してください', true); return; } toast('公開しました。スタッフ用ページに反映中…'); setTimeout(() => { try { kickSyncAfterChange(); } catch (e) {} }, 300); }; /* 保存できた時だけ公開扱い（2026-11-13） */
     };
     const off = $('#pbOff', pop); if (off) off.onclick = () => { const box = $('#pbNow', pop); box.classList.add('ask'); box.innerHTML = `<div class="pbq">${esc(lbl(sh))}の公開をやめますか？</div><div class="pbnote">スタッフ用ページから見えなくなります。</div><div class="pbbtns"><button class="btn" id="pbNo">やめない</button><button class="btn danger" id="pbYes">公開をやめる</button></div>`; $('#pbNo', pop).onclick = () => pop.remove(); $('#pbYes', pop).onclick = () => { store.patchSheet(sh.id, { published: false, announce: (sh.announce && sh.announce <= todayISO()) ? '' : (sh.announce || '') }); toast('公開をやめました'); pop.remove(); }; };
   });
