@@ -2914,14 +2914,14 @@ function confirmDiff(d, fx) { const out = { add: 0, chg: 0, del: 0, patch: {}, h
 function openConfirm(anchor) { const d = sheets[cur]; if (!d || d.phase !== 'draft') return; const fx = sibling(d, 'fixed'); const df = confirmDiff(d, fx); const ps = pubState(fx);
   popover(anchor, `<div class="pb7"><b>${esc(lbl(d))} 作成中を確定する</b>
   <div class="pbst">${!fx ? 'まだ確定がありません。今の作成中の内容で確定を作ります。' : df.n || df.memo ? `確定に入る変更：<b>追加 ${df.add}・変更 ${df.chg}・消す ${df.del}</b>（${df.days.size}日分）${df.memo && !df.n ? '・メモ' : ''}` : '確定と同じです。変更はありません。'}</div>
-  ${ps === 'on' && (df.n || df.memo) ? '<div class="pbnote">公開中なので、次の同期でスタッフにも見えます。</div>' : ''}
+  ${ps === 'on' && (df.n || df.memo) ? '<div class="pbnote">公開中なので、すぐスタッフにも見えます。</div>' : ''}
   <div class="pbbtns"><button class="btn" id="cfNo">やめる</button><button class="btn primary" id="cfYes" ${!fx || df.n || df.memo ? '' : 'disabled'}>確定する</button></div>
   ${fx && df.n ? '<div class="pbsec"><div class="pbnote">スプシ側で確定を直したときなど、確定の内容を作成中に戻すこともできます。</div><button class="btn small" id="cfBack">確定の内容を作成中に戻す</button></div>' : ''}</div>`, pop => {
     $('#cfNo', pop).onclick = () => pop.remove();
     $('#cfYes', pop).onclick = async () => { $('#cfYes', pop).disabled = true; pop.remove();
       if (!fx) { const nf = { ...JSON.parse(JSON.stringify(d)), id: d.id.replace(/-draft$/, '-fixed'), phase: 'fixed', checks: {}, createdAt: todayISO() }; await store.setSheet(nf); toast('確定を作りました（公開は「確定」の「未公開」から）'); setTimeout(() => openSheetPhoto(nf.id, true), 400); return; }
       if (df.n) { await store.patchCells(fx.id, df.patch, { force: true }); store.appendHistory(fx.id, df.hist); } if (df.memo) store.patchSheet(fx.id, { memos: JSON.parse(JSON.stringify(d.memos || {})) });
-      toast(`確定しました（${df.n}マス）`); setTimeout(() => openSheetPhoto(fx.id, true), 400); };
+      toast(`確定しました（${df.n}マス）`); if (fx.published) { try { kickSyncAfterChange(); } catch (e) {} } /* 公開済みの確定を更新したら、すぐスタッフ用ページへ（2026-11-13: これまでは最大15分遅れていた） */ setTimeout(() => openSheetPhoto(fx.id, true), 400); };
     const bk = $('#cfBack', pop); if (bk) bk.onclick = () => { if (bk.dataset.armed) { const p = {}; for (const k in df.patch) p[k] = (fx.cells || {})[k] || null; store.patchCells(d.id, p, { allowOff: true }); pop.remove(); toast('作成中を確定の内容に戻しました'); } else { bk.dataset.armed = '1'; bk.textContent = 'もう一度押すと戻します（作成中の変更は消えます）'; } };
   }); }
 function pubState(sh) { if (!sh || sh.phase !== 'fixed') return null; const t = todayISO(); return sh.published ? 'on' : sh.announce && sh.announce <= t ? 'on' : sh.announce ? 'plan' : 'off'; }
