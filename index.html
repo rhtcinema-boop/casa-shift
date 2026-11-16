@@ -4042,7 +4042,15 @@ const NOTIFY_DEF = { open: { on: true, text: '{期間}の希望を受付中（�
 function notifyOf(s) { const n = s.notify || {}; const hour = n.hour != null && n.hour !== '' ? +n.hour : NOTIFY_DEF.hour; const rm = { ...NOTIFY_DEF.remind, ...(n.remind || {}) };
   const list = Array.isArray(rm.list) && rm.list.length ? rm.list.map(e => ({ days: +e.days || 0, hour: e.hour != null && e.hour !== '' ? +e.hour : hour, text: e.text || rm.text })) : [{ days: +rm.days || 0, hour, text: rm.text }];
   const open = { ...NOTIFY_DEF.open, ...(n.open || {}) }; open.hour = open.hour != null && open.hour !== '' ? +open.hour : hour;
-  return { open, fixed: { ...NOTIFY_DEF.fixed, ...(n.fixed || {}) }, remind: { ...rm, list }, hour, skip: Array.isArray(n.skip) ? n.skip : [] }; }
+  return { open, fixed: { ...NOTIFY_DEF.fixed, ...(n.fixed || {}) }, remind: { ...rm, list }, hour, skip: Array.isArray(n.skip) ? n.skip : [], monthly: ntMonthly(n.monthly) }; }
+/* 毎月の募集（サーバーの pushMonthly_ と同じ直し方）2026-11-16: 前半の分は前月の day〜close 日、後半の分は当月の day〜close 日に受付 */
+function ntMonthly(m) { m = m || {}; const c = (v, f, lo, hi) => { v = Math.round(+v); return !v || isNaN(v) ? f : Math.max(lo, Math.min(hi, v)); }; const a = m.a || {}, b = m.b || {}; const ad = c(a.day, 20, 1, 28), bd = c(b.day, 5, 1, 15);
+  return { on: !!m.on, a: { day: ad, close: Math.max(ad, c(a.close, 25, 1, 28)) }, b: { day: bd, close: Math.max(bd, c(b.close, 9, 1, 15)) } }; }
+const ntDomOpts = (v, hi) => Array.from({ length: hi }, (_, i) => `<option value="${i + 1}" ${i + 1 === +v ? "selected" : ""}>${i + 1}日</option>`).join("");
+function ntMoNext(mo) { /* 次の受付: 今日以降で一番近い2つ */ const t = new Date(); const p2 = x => String(x).padStart(2, "0"); const today = t.getFullYear() + "-" + p2(t.getMonth() + 1) + "-" + p2(t.getDate()); const out = [];
+  for (let k = 0; k < 3; k++) { const d = new Date(t.getFullYear(), t.getMonth() + k, 1); const y = d.getFullYear(), m = d.getMonth() + 1, nm = m === 12 ? 1 : m + 1; const ym = y + "-" + p2(m) + "-";
+    out.push({ open: ym + p2(mo.b.day), close: ym + p2(mo.b.close), label: m + "月後半" }, { open: ym + p2(mo.a.day), close: ym + p2(mo.a.close), label: nm + "月前半" }); }
+  return out.filter(x => x.close >= today).sort((x, y) => x.open < y.open ? -1 : 1).slice(0, 2).map(x => `${x.label} ${ntDay(x.open)}〜${ntDay(x.close)}`).join("\n"); }
 function ntCtx() { const sh = cur ? sheets[cur] : null; const wsh = sh ? wishSheetOf(sh) : null; const lab = sh ? lbl(sh) : "12月前半"; const dl = wsh && wsh.deadline ? wsh.deadline : ""; const dlTxt = dl ? (() => { const d = new Date(dl + "T00:00:00"); return (d.getMonth() + 1) + "/" + d.getDate() + "(" + WD[d.getDay()] + ")"; })() : "11/20(木)"; return { fill: t => String(t || "").replace(/\{期間\}/g, lab).replace(/\{締切\}/g, dlTxt) }; }
 const ntHourOpts = v => Array.from({ length: 24 }, (_, x) => `<option value="${x}" ${x === +v ? "selected" : ""}>${String(x).padStart(2, "0")}:00</option>`).join("");
 const ntToOpts = (v, extra) => [["all", "全員"], ["emp", "社員だけ"], ["part", "社員以外"]].map(([k, l]) => `<option value="${k}" ${k === (v || "all") ? "selected" : ""}>${l}${extra || ""}</option>`).join("");
@@ -4054,6 +4062,10 @@ function notifyHtml(s) { const n = notifyOf(s); const x = ntCtx();
   const staff = activeStaff().filter(st => !st.placeholder); const skip = new Set(n.skip);
   return `<h4 class="setsec" id="ntSec">スタッフへの通知 <button type="button" class="lgq" aria-label="通知の説明" onclick="event.preventDefault();toast('通知をオンにしたスタッフのスマホに届きます。文面の {期間}{締切} は自動で入ります。同じ通知は期間ごとに1回だけです。実際に届くのは指定の時刻から15分以内です', 6000)">?</button></h4>
   <div class="ntsum" id="ntSum" hidden></div>
+  <div class="ntcard ${n.monthly.on ? "" : "off"}" data-nt="mo"><div class="nthead"><label class="ntsw"><input type="checkbox" id="nt_mo_on" ${n.monthly.on ? "checked" : ""}><span class="ntsl"></span></label><b>毎月の募集</b><button type="button" class="lgq" aria-label="毎月の募集の説明" onclick="event.preventDefault();toast('決めた日になると、希望の受付が自動で始まり、受付開始の通知が届きます。締切も自動で入ります。先に日付を入れた期間はそのままです', 6000)">?</button></div>
+    <div class="ntrow"><span class="ntk">前半</span><span>前月</span><select id="nt_mo_ad" aria-label="前半の受付開始日">${ntDomOpts(n.monthly.a.day, 28)}</select><span>〜</span><select id="nt_mo_ac" aria-label="前半の締切日">${ntDomOpts(n.monthly.a.close, 28)}</select></div>
+    <div class="ntrow"><span class="ntk">後半</span><span>当月</span><select id="nt_mo_bd" aria-label="後半の受付開始日">${ntDomOpts(n.monthly.b.day, 15)}</select><span>〜</span><select id="nt_mo_bc" aria-label="後半の締切日">${ntDomOpts(n.monthly.b.close, 15)}</select></div>
+    <div class="ntbub"><b>次の受付</b><span id="nt_mo_pv" style="white-space:pre-line">${esc(ntMoNext(n.monthly))}</span></div></div>
   <div class="ntcard ${n.open.on ? "" : "off"}" data-nt="open">${head("open", "希望の受付開始")}
     <div class="ntrow"><span class="ntk">いつ</span><span>受付開始日の</span><select id="nt_open_h">${ntHourOpts(n.open.hour)}</select></div>
     <div class="ntrow"><span class="ntk">誰に</span><select id="nt_open_to">${ntToOpts(n.open.to)}</select></div>${textBox("open")}</div>
@@ -4084,16 +4096,20 @@ async function ntLoadStatus() { const api = window.__gasDb && window.__gasDb.pus
 function wireNotify() { /* 操作に合わせて見た目とプレビューを更新。状態（誰がオンか等）は裏で読んで後から埋める */
   const x = ntCtx();
   ["open", "remind", "fixed"].forEach(k => { const on = $("#nt_" + k + "_on"), cd = document.querySelector(`.ntcard[data-nt="${k}"]`); if (on && cd) on.onchange = () => cd.classList.toggle("off", !on.checked); const t = $("#nt_" + k + "_t"), pv = $("#nt_" + k + "_pv"); if (t && pv) t.oninput = () => { pv.textContent = x.fill(t.value || NOTIFY_DEF[k].text); }; });
+  { const on = $("#nt_mo_on"), cd = document.querySelector('.ntcard[data-nt="mo"]'); if (on && cd) { on.onchange = () => cd.classList.toggle("off", !on.checked);
+    const g = id => $("#" + id), upd = () => { [["nt_mo_ad", "nt_mo_ac"], ["nt_mo_bd", "nt_mo_bc"]].forEach(([d, c]) => { if (+g(c).value < +g(d).value) g(c).value = g(d).value; }); $("#nt_mo_pv").textContent = ntMoNext(readMonthly()); };
+    ["nt_mo_ad", "nt_mo_ac", "nt_mo_bd", "nt_mo_bc"].forEach(id => { g(id).onchange = upd; }); } }
   const box = $("#ntRems"), add = $("#ntRemAdd"); const refresh = () => { const rows = box.querySelectorAll(".ntrem"); rows.forEach(r => { r.querySelector(".ntdel").hidden = rows.length < 2; }); if (add) add.hidden = rows.length >= 5; };
   const wire = r => { const t = r.querySelector(".nt-rt"), p = r.querySelector(".nt-rp"); t.oninput = () => { p.textContent = x.fill(t.value || NOTIFY_DEF.remind.text); }; r.querySelector(".ntdel").onclick = () => { r.remove(); refresh(); }; };
   if (box) { box.querySelectorAll(".ntrem").forEach(wire); refresh(); }
   if (add) add.onclick = () => { const rows = box.querySelectorAll(".ntrem"); const last = rows[rows.length - 1]; const d = last ? Math.max(0, +last.querySelector(".nt-rd").value - 1) : 0; const tmp = document.createElement("div"); tmp.innerHTML = ntRemRow({ days: d, hour: last ? +last.querySelector(".nt-rh").value : NOTIFY_DEF.hour, text: last ? last.querySelector(".nt-rt").value : NOTIFY_DEF.remind.text }); const r = tmp.firstElementChild; box.appendChild(r); wire(r); refresh(); };
   const go = $("#ntTestGo"); if (go) go.onclick = async () => { const who = $("#ntTestWho").value, k = $("#ntTestKind").value; if (!who) return; const src = k === "remind" ? document.querySelector("#ntRems .nt-rt") : $("#nt_" + k + "_t"); go.disabled = true; try { const r = await window.__gasDb.pushTest(storeId, who, x.fill(src ? src.value : "")); toast(r && r.sent ? `${who} に送りました` : `${who} に届きませんでした（端末の登録を確認）`, 4000); } catch (e) { toast("送れませんでした: " + (e.message || e), 4000); } go.disabled = false; };
   ntLoadStatus(); }
+function readMonthly() { const v = id => document.getElementById(id)?.value; return ntMonthly({ on: !!document.getElementById("nt_mo_on")?.checked, a: { day: v("nt_mo_ad"), close: v("nt_mo_ac") }, b: { day: v("nt_mo_bd"), close: v("nt_mo_bc") } }); }
 function readNotify() { const v = id => document.getElementById(id); const hr = (id, d) => { const n = parseInt(v(id)?.value, 10); return isNaN(n) ? d : Math.max(0, Math.min(23, n)); }; const t = k => ({ on: !!v('nt_' + k + '_on')?.checked, text: (v('nt_' + k + '_t')?.value || '').trim() || NOTIFY_DEF[k].text, to: v('nt_' + k + '_to')?.value || 'all' });
   const list = [...document.querySelectorAll('#ntRems .ntrem')].map(r => ({ days: Math.max(0, Math.min(7, +r.querySelector('.nt-rd').value || 0)), hour: hr0(r.querySelector('.nt-rh').value), text: r.querySelector('.nt-rt').value.trim() || NOTIFY_DEF.remind.text })); function hr0(x) { const n = parseInt(x, 10); return isNaN(n) ? NOTIFY_DEF.hour : Math.max(0, Math.min(23, n)); }
   const first = list[0] || { days: 1, hour: NOTIFY_DEF.hour, text: NOTIFY_DEF.remind.text }; const openH = hr('nt_open_h', NOTIFY_DEF.hour);
-  return { hour: openH, open: { ...t('open'), hour: openH }, fixed: t('fixed'), remind: { on: !!v('nt_remind_on')?.checked, to: v('nt_remind_to')?.value || 'all', text: first.text, days: first.days, list }, skip: [...document.querySelectorAll('[data-ntp]')].filter(c => !c.checked).map(c => c.dataset.ntp) }; }
+  return { hour: openH, open: { ...t('open'), hour: openH }, fixed: t('fixed'), remind: { on: !!v('nt_remind_on')?.checked, to: v('nt_remind_to')?.value || 'all', text: first.text, days: first.days, list }, skip: [...document.querySelectorAll('[data-ntp]')].filter(c => !c.checked).map(c => c.dataset.ntp), monthly: readMonthly() }; }
 // ---------- boot ----------
 document.addEventListener('keydown', e => { if (e.key === 'Escape') { document.querySelectorAll('.drawer.open').forEach(d => d.classList.remove('open')); document.querySelectorAll('.pop').forEach(p => p.remove()); const ph = $('.photo'); if (ph) ph.remove(); } });
 document.body.dataset.view = 'grid';
