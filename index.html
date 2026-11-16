@@ -212,7 +212,7 @@
     },
   };
   window.claude = { use: async n => { dbg('use ' + n); return (n === 'db' ? db : n === 'user' ? user : n === 'downloads' ? downloads : null); } };
-  window.__gasDb = { get inflight() { return inflight; }, get docs() { return docs; }, get rev() { return rev; }, get writes() { return writes; }, poll, who: whoId, write: (path, data) => write({ op: 'set', path, data }), rake: tab => call('admin_rake', tab), syncNow: id => call('admin_syncNow', id), publishMeta: id => call('admin_publishMeta', id), pushStatus: id => call('admin_pushStatus', id), pushTest: (id, name, text) => call('admin_pushTest', id, name, text) };
+  window.__gasDb = { get inflight() { return inflight; }, get docs() { return docs; }, get rev() { return rev; }, get writes() { return writes; }, poll, who: whoId, write: (path, data) => write({ op: 'set', path, data }), rake: tab => call('admin_rake', tab), syncNow: id => call('admin_syncNow', id), publishMeta: id => call('admin_publishMeta', id), pushStatus: id => call('admin_pushStatus', id), pushTest: (id, name, text) => call('admin_pushTest', id, name, text), pushNudge: (id, names, text, label) => call('admin_pushNudge', id, names, text, label) };
   const refreshWho = () => { const b = document.querySelector('.gas-who'); if (b) b.remove(); whoButton(); };
   const boot = async () => { if (window.__photoOnly) return; /* 写真だけの表示では名前を聞かない */
     const dk = devGet(); /* 0) 端末キー: サーバーに覚えた名前を戻す（URL の ?me= より優先。名前を変えたらキーの名前も変わるため） */
@@ -1762,7 +1762,7 @@ body.ph-wish #phase button.on{background:#f2a33a!important;color:#fff!important}
 .dl9{display:flex;flex-direction:column;gap:10px;min-width:min(400px,calc(100vw - 52px))}.dl9 .dlrow{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}.dl9 .dlrow label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:500;color:#667085}.dl9 .dlrow input{width:148px;height:40px;border-radius:10px}
 .dl9 #dlSave{height:36px;min-width:72px;border-radius:9px}.dl9 #dlSave:disabled{background:#F2F3F5;color:#98A2B3;border-color:transparent}.dl9 .dlst{font-size:12px;font-weight:500;color:#344054;margin-top:-2px}.dl9 .dlst.warn{color:#B7791F}.dl9 .dlst.on{color:#27864B}.dl9 .dlst.past{color:#667085}.dl9 .dlst.bad{color:#C93632}
 .dl9 .dlh{font-size:13px;font-weight:700}.dl9 .dlh.ng{color:#C93632;background:#FFF5F2;align-self:flex-start;padding:4px 10px;border-radius:999px}.dl9 .dlh.ok{color:#27864B;cursor:pointer}.dl9 .sublist{max-height:280px}.dl9 .sublist .sr{min-height:40px;align-items:center;border-bottom:1px solid #F0F1F3}.dl9 .sublist .sr b{font-size:13px;font-weight:600;color:#1D2939}.dl9 .sublist .sr:hover{background:#FFF8F5}.dl9 .sublist .sr.ng span{color:#C93632;font-size:12px;font-weight:600}.dl9 .sublist .sr.ok span{color:#27864B;font-size:11px;font-weight:500}.dl9 .dlnone{font-size:13px;color:#27864B;padding:6px 0}
-.dl9 .dlfoot{position:sticky;bottom:-18px;margin:0 -18px -18px;padding:14px 18px;background:var(--paper,#fff);border-top:1px solid #E5E7EB;display:flex;justify-content:flex-end;align-items:center;gap:10px;border-radius:0 0 16px 16px}.dl9 .dlfh{font-size:12px;color:#667085;margin-right:auto;white-space:nowrap}@media (max-width:600px){.dl9 .dlfh{display:none}}.dl9 .dlfoot .btn{height:36px;border-radius:9px}
+.dl9 .dlpush{display:flex;align-items:center;gap:10px;margin:12px 0 4px;flex-wrap:wrap}.dl9 .dlpush[hidden]{display:none}.dl9 .dlfoot{position:sticky;bottom:-18px;margin:0 -18px -18px;padding:14px 18px;background:var(--paper,#fff);border-top:1px solid #E5E7EB;display:flex;justify-content:flex-end;align-items:center;gap:10px;border-radius:0 0 16px 16px}.dl9 .dlfh{font-size:12px;color:#667085;margin-right:auto;white-space:nowrap}@media (max-width:600px){.dl9 .dlfh{display:none}}.dl9 .dlfoot .btn{height:36px;border-radius:9px}
 @media (min-width:601px) and (max-width:760px){ /* 1段に入らない幅は道具を2段目へ（はみ出し防止） */
   .top{flex-wrap:wrap!important;row-gap:6px!important}.top .where{order:0!important;width:auto!important;flex:1 1 auto!important}.top .tools{order:0!important;width:auto!important;margin-left:auto}.top #sheetname{max-width:110px}}
 /* 希望・作成中・確定 */
@@ -2900,11 +2900,19 @@ function openDeadline(anchor) {
   <div class="sublist">${info.filter(x => !x.sub).map(row).join('') || '<div class="dlnone">全員提出済みです</div>'}</div>
   ${subd.length ? `<details class="dlok"><summary class="dlh ok">提出済み ${subd.length}人</summary><div class="sublist">${subd.map(row).join('')}</div></details>` : ''}
   <div class="hint">スタッフ用ページから出た希望とメモは、スプシ同期のあとに反映されます。</div>
+  <div class="dlpush" id="dlPushRow" hidden><button class="btn" id="dlPush" disabled>未提出に通知</button><span class="hint" id="dlPushN"></span></div>
   <div class="dlfoot"><span class="dlfh">LINE用の文章</span><button class="btn primary" id="dlCopy" ${unsub.length ? '' : 'disabled'}>⧉ 未提出${unsub.length}人へのリマインドをコピー</button></div></div>`, pop => {
     const o0 = sh.wishOpen || '', c0 = sh.deadline || ''; const sv = $('#dlSave', pop);
     const chk = () => { const o = $('#dlOpen', pop).value || '', c = $('#dlDate', pop).value || ''; const bad = o && c && o > c; sv.disabled = !canW() || bad || (o === o0 && c === c0); sv.classList.toggle('primary', !sv.disabled); const [tx, k] = bad ? ['募集開始が締切より後になっています', 'bad'] : stLine(o, c); const el = $('#dlSt', pop); el.textContent = tx; el.className = 'dlst ' + k; };
     ['#dlOpen', '#dlDate'].forEach(q => { $(q, pop).addEventListener('input', chk); $(q, pop).addEventListener('change', chk); });
     sv.onclick = () => { const o = $('#dlOpen', pop).value || '', c = $('#dlDate', pop).value || ''; if (o && c && o > c) return toast('募集開始が締切より後になっています', true); store.patchSheet(sh.id, { wishOpen: o, deadline: c }); toast('募集期間を保存。スタッフ用ページに反映中（1分ほど）'); setTimeout(() => { try { kickSyncAfterChange(); } catch (e) {} }, 1500); pop.remove(); };
+    { /* 未提出の人に今すぐ通知（2026-11-16）: 通知オンの人数を先に出し、2回押しで送る */ const api = window.__gasDb; const row = $('#dlPushRow', pop), bt = $('#dlPush', pop), nn = $('#dlPushN', pop);
+      if (api && api.pushStatus && api.pushNudge && canW() && unsub.length) { row.hidden = false; nn.textContent = '確認中…'; const forStore = storeId; let onNames = [], armed = false, tm = null;
+        const dl = sh.deadline ? new Date(sh.deadline + 'T00:00:00') : null; const text = `${lbl(sh)}の希望がまだです${dl ? `（締切 ${md(dl)}(${wd(dl)})）` : ''}`;
+        const idle = () => { armed = false; bt.classList.remove('primary'); bt.textContent = '未提出に通知'; bt.disabled = !onNames.length; nn.textContent = onNames.length ? `通知オン ${onNames.length} / ${unsub.length}人` : '通知オンの人がいません'; };
+        api.pushStatus(storeId).then(r => { if (!pop.isConnected || forStore !== storeId) return; if (!r || !r.hub) { row.hidden = true; return; } const on = new Set((r.staff || []).filter(x => x.devices > 0).map(x => x.name)); const skip = new Set(notifyOf(settingsOf()).skip); onNames = unsub.filter(s => on.has(s.name) && !skip.has(s.id)).map(s => s.name); idle(); }).catch(() => { row.hidden = true; });
+        bt.onclick = async () => { if (!onNames.length) return; if (!armed) { armed = true; bt.classList.add('primary'); bt.textContent = `${onNames.length}人に送る`; nn.textContent = 'もう一度押すと送ります'; clearTimeout(tm); tm = setTimeout(() => { if (pop.isConnected && armed) idle(); }, 5000); return; }
+          clearTimeout(tm); armed = false; bt.disabled = true; bt.textContent = '送信中…'; try { const r = await api.pushNudge(storeId, onNames, text, lbl(sh)); toast(r && r.sent ? `${onNames.length}人に送りました` : '届きませんでした', !(r && r.sent)); if (pop.isConnected) { bt.classList.remove('primary'); bt.textContent = r && r.sent ? '送りました' : '未提出に通知'; nn.textContent = ''; } } catch (e) { toast('送れませんでした: ' + (e.message || e), true); if (pop.isConnected) idle(); } }; } }
     const cp = $('#dlCopy', pop); cp.onclick = () => { copyText(remind(), 'リマインド文をコピーしました'); const t0 = cp.textContent; cp.textContent = 'コピーしました'; setTimeout(() => { if (cp.isConnected) cp.textContent = t0; }, 1500); };
   });
 }
@@ -4083,7 +4091,7 @@ function notifyHtml(s) { const n = notifyOf(s); const x = ntCtx();
     <div class="ntrow"><select id="ntTestWho" aria-label="送る相手"><option value="">通知オンの人を選ぶ</option></select><select id="ntTestKind" aria-label="送る通知"><option value="open">受付開始</option><option value="remind">締切の前</option><option value="fixed">確定</option></select><button type="button" class="btn small" id="ntTestGo" disabled>送る</button></div></details>
   <details class="ntdet" id="ntLog"><summary>送った履歴</summary><div id="ntLogBody" class="nthint">まだありません</div></details>`; }
 function ntDay(iso) { const d = new Date(iso + "T00:00:00"); return (d.getMonth() + 1) + "/" + d.getDate() + "(" + WD[d.getDay()] + ")"; }
-const NT_KIND = { open: "受付開始", remind: "締切の前", fixed: "確定" };
+const NT_KIND = { open: "受付開始", remind: "締切の前", fixed: "確定", nudge: "未提出へ" };
 async function ntLoadStatus() { const api = window.__gasDb && window.__gasDb.pushStatus; if (!api) return; const forStore = storeId; let r; try { r = await api(storeId); } catch (e) { return; } if (!r || !r.hub || forStore !== storeId || !$("#ntSum")) return;
   const on = (r.staff || []).filter(x => x.devices > 0), by = {}; (r.staff || []).forEach(x => { by[x.name] = x; }); const total = (r.staff || []).length;
   const sum = $("#ntSum"); sum.hidden = false; const pct = total ? Math.round(on.length / total * 100) : 0;
