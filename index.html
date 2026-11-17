@@ -590,6 +590,7 @@ body[data-view]:not([data-view="grid"]) :is(.where,.kpis,#btnCheck,#btnDeadline,
 .photo .bar2 .btn{padding:8px 14px;font-size:14px}
 body.photo-only>*:not(.photo){visibility:hidden!important}body.photo-only{background:#111}body.photo-only .photo{background:#111}
 .photo .hintw{color:#fff;font-size:12px;text-align:center;text-shadow:0 1px 2px rgba(0,0,0,.6)}
+.photo .rkwarn{display:flex;gap:10px;align-items:center;background:#c5221f;color:#fff;font-weight:700;font-size:14px;border-radius:12px;padding:8px 10px 8px 14px}
 @media (max-width:1640px){ .stat.opt{display:none} #btnHelp .lb{display:none} .top{gap:8px 12px} .tools{gap:0} }
 @media (max-width:1380px){ .where .hint{display:none} .tbtn{padding:0 9px} }
 @media (max-width:1180px){ [data-menu] .tbtn .lb,[data-menu] .tbtn .chev{display:none} }
@@ -2959,12 +2960,16 @@ function openPublish(anchor) {
 let downloadsApi = undefined; let photoLayout = 'wide';
 /* 写真は横長だけ（オーナー指示） */
 async function refreshRake() { /* 窓口からトナメ報告シートを読み直して rakeInfo を更新（8秒で諦めて手元の分を使う） */
-  const api = window.__gasDb && window.__gasDb.rake; if (!api || localMode) return; const tab = (rakeInfo && rakeInfo.tab) || (storeName() + '店2026.06~');
-  try { const rk = await Promise.race([api(tab), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 8000))]); if (rk && rk.rows) { const days = {}; rk.rows.forEach(x => { days[x.d] = x; }); rakeInfo = { days, tab: rk.tab || tab, at: new Date().toISOString() }; try { if (dbApi) Promise.resolve(dbApi.doc('rake/' + storeId).set(rakeInfo)).catch(() => {}); } catch (e) {} } else if (rk && rk.error) console.warn('rake', rk.error); } catch (e) { console.warn('rake refresh', e && e.message); }
+  const api = window.__gasDb && window.__gasDb.rake; if (!api || localMode) return 'skip'; const tab = (rakeInfo && rakeInfo.tab) || (storeName() + '店2026.06~');
+  /* 2026-11-17 オーナー指示「絶対に出す」: 8秒で諦めていたのを25秒に。失敗したらもう1回 */
+  for (let i = 0; i < 2; i++) try { const rk = await Promise.race([api(tab), new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), 25000))]); if (rk && rk.rows) { const days = {}; rk.rows.forEach(x => { days[x.d] = x; }); rakeInfo = { days, tab: rk.tab || tab, at: new Date().toISOString() }; try { if (dbApi) Promise.resolve(dbApi.doc('rake/' + storeId).set(rakeInfo)).catch(() => {}); } catch (e) {} return 'ok'; } else if (rk && rk.error) console.warn('rake', rk.error); } catch (e) { console.warn('rake refresh', e && e.message); }
+  return 'fail';
 }
 function rakeLine(d) { /* 写真用: 前日営業成績（オーナー指定 2026-10-15）: 「リング 実績（目標との差 ±x）」「トナメ 実績（目標との差 ±x）」。リング=AB列/目標S列、トナメ=AJ+AR/目標L列。単位なし。トナメは目標0かつ実績未入力なら「非開催」 */
-  if (!rakeInfo || !rakeInfo.days) return null; const p = new Date(d); p.setDate(p.getDate() - 1); const iso = isoLocal(p); const x = rakeInfo.days[iso]; if (!x) return null;
-  const rT = x.t, rA = x.rA != null ? x.rA : x.a; if (rA == null) return null;
+  const p = new Date(d); p.setDate(p.getDate() - 1); const iso = isoLocal(p); const x = rakeInfo && rakeInfo.days ? rakeInfo.days[iso] : null;
+  const none = () => iso < todayISO() ? { title: '前日営業成績（' + md(p) + ' ' + wd(p) + '）', lines: [['未入力', true]], missing: true } : null; /* 明日以降の写真は前日がまだ無いので出さない */
+  if (!x) return none();
+  const rT = x.t, rA = x.rA != null ? x.rA : x.a; if (rA == null) return none();
   const n = v => (v < 0 ? '−' : '') + Math.round(Math.abs(v)).toLocaleString('ja-JP'); const gap = (a, t) => (a == null || t == null) ? '' : '（目標との差 ' + (a - t >= 0 ? '+' : '−') + Math.round(Math.abs(a - t)).toLocaleString('ja-JP') + '）';
   const tT = x.tt || 0; const tIn = x.t1 != null || x.t2 != null; const tA = tIn ? (x.t1 || 0) + (x.t2 || 0) : 0;
   const lines = [['リング ' + n(rA) + gap(rA, rT), rT != null && rA < rT]];
@@ -3032,12 +3037,12 @@ async function openPhoto(day) {
   if (day == null) { const t = todayISO(); day = 0; for (let i = 0; i < sh.days; i++) if (isoLocal(dateOf(sh, i)) === t) day = i; }
   let ov = $('.photo'); if (!ov) { ov = document.createElement('div'); ov.className = 'photo'; document.body.appendChild(ov); }
   ov.innerHTML = '<div class="hintw">画像を作成中…</div>';
-  await refreshRake(); /* 前日の営業成績を今のシートから読み直す（同期待ちで古い数字が出ないように） */
-  const cv = await drawShiftImage(sh, day, photoLayout); const d = dateOf(sh, day);
+  const rkSt = await refreshRake(); /* 前日の営業成績を今のシートから読み直す（同期待ちで古い数字が出ないように） */
+  const cv = await drawShiftImage(sh, day, photoLayout); const d = dateOf(sh, day); const rkNow = rakeLine(d); const rkMiss = !!(rkNow && rkNow.missing);
   const url = cv.toDataURL('image/png'); const fname = `casa${storeName()}シフト_${isoLocal(d)}.png`;
   if (downloadsApi === undefined) { try { downloadsApi = await (window.claude?.use?.('downloads') ?? null); } catch { downloadsApi = null; } }
-  ov.innerHTML = `<img src="${url}" alt="${esc(fname)}"><div class="bar2"><button class="btn small" id="phPrev" ${day > 0 ? '' : 'disabled'}>◀ 前日</button><b>${md(d)}（${wd(d)}）</b><button class="btn small" id="phNext" ${day < sh.days - 1 ? '' : 'disabled'}>翌日 ▶</button>${downloadsApi ? '<button class="btn primary" id="phSave">写真に保存</button>' : ''}<button class="btn" id="phClose">閉じる</button></div><div class="hintw">iPhoneは画像を長押し →「写真に追加」でもカメラロールに保存できます</div>`;
-  $('#phPrev').onclick = () => openPhoto(day - 1); $('#phNext').onclick = () => openPhoto(day + 1); $('#phClose').onclick = () => ov.remove();
+  ov.innerHTML = `<img src="${url}" alt="${esc(fname)}"><div class="bar2"><button class="btn small" id="phPrev" ${day > 0 ? '' : 'disabled'}>◀ 前日</button><b>${md(d)}（${wd(d)}）</b><button class="btn small" id="phNext" ${day < sh.days - 1 ? '' : 'disabled'}>翌日 ▶</button>${downloadsApi ? '<button class="btn primary" id="phSave">写真に保存</button>' : ''}<button class="btn" id="phClose">閉じる</button></div>${rkMiss ? `<div class="rkwarn" id="phRkWarn"><span>${rkSt === 'fail' ? '前日の成績を読めませんでした' : '前日の成績が未入力です'}</span><button class="btn small primary" id="phRk">読み直す</button></div>` : ''}<div class="hintw">iPhoneは画像を長押し →「写真に追加」でもカメラロールに保存できます</div>`;
+  $('#phPrev').onclick = () => openPhoto(day - 1); $('#phNext').onclick = () => openPhoto(day + 1); $('#phClose').onclick = () => ov.remove(); { const rb = $('#phRk'); if (rb) rb.onclick = () => openPhoto(day); }
   ov.querySelectorAll('[data-l]').forEach(b => b.onclick = () => { photoLayout = b.dataset.l; try { localStorage.setItem(LS_KEY + '-photo', photoLayout); } catch {} openPhoto(day); });
   ov.onclick = e => { if (e.target === ov) ov.remove(); };
   const save = $('#phSave'); if (save) save.onclick = async () => {
