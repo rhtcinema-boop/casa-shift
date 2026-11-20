@@ -1884,7 +1884,7 @@ h4.setsec{margin:18px 0 6px;font-size:14px;font-weight:700;color:#1d2939;border-
 <p class="hint">練習しながら覚えたいときは「管理 › 使い方（練習）」へ。ここは読んで確かめる説明です。</p>
 <h4>シフトを入れる</h4><ul><li>マスを押すと選ばれ、もう一度押す（かダブルクリック・<kbd>F2</kbd>）で入力。数字を打てばそのまま入力。<kbd>Enter</kbd>で確定して下へ、<kbd>Tab</kbd>で右へ（エクセルと同じ）。ドラッグや <kbd>Shift</kbd>+矢印で範囲を選び、<kbd>⌘C</kbd>/<kbd>⌘V</kbd> でコピー・貼り付け、<kbd>Delete</kbd> でまとめて消す。右下の■を引っぱると同じ勤務を塗りつぶし。入りと終わりは別々のマスでも、「17.5-23」のように1マスにまとめても入ります</li><li>17.5＝17時半、25＝翌1時 … 31＝翌7時。空にして <kbd>Enter</kbd> でその側だけ消えます</li><li>マスを押すと下に「時間帯責任者」「締め」が出ます（帯が青・赤になり、締めは数字が赤）</li><li>表をコピーしたものを貼り付けると、まとめて入ります</li></ul>
 <h4>見る・並べる</h4><ul><li>日付を押すとその日の30分ごとの帯（ガント）が開きます。スマホでは日別画面</li><li>見出しの ⇅ で入りの早い順などに並べ替え（スプシのフィルタと同じ）</li><li>日付の下の「▲」は人が足りない印。押すと入れる人の候補が出ます</li><li>「表示」から、問題の印・時給の列・希望との比較を切り替えます</li></ul>
-<h4>希望・作成中・確定</h4><ul><li>上の「希望／作成中／確定」で切り替え。希望を表示しているときはオレンジの帯が出ます</li><li>シフトは「作成中」で作ります。人件費・人数・足りない時間がくわしく出ます。できたら「確定する」で確定に入れます（確定は直接は直せません）</li><li>「確定」はスタッフに見せる完成版。難しい印は出ません。公開・スプシ同期・スタッフ用ページはこの確定を使います</li><li>希望のマスに「0」で休み（黒いマス）。その日は作成中に新しく入れられません</li><li>希望を直すと、作成中の同じマスも変わります（作成中で自分で直したマスはそのまま）</li><li>帯の「作成中へ流し込む」で、希望をまとめて作成中に入れられます</li><li>スタッフはスタッフ用ページから希望とメモを出します（同期で入ります）</li></ul>
+<h4>希望・作成中・確定</h4><ul><li>上の「希望／作成中／確定」で切り替え。希望を表示しているときはオレンジの帯が出ます</li><li>シフトは「作成中」で作ります。人件費・人数・足りない時間がくわしく出ます。できたら「確定する」で確定に入れます（確定は直接は直せません）</li><li>一度確定した後は、作成中を直すとそのまま確定にも入ります（公開中ならスタッフにもすぐ見えます）。「確定する」を押し直す必要はありません</li><li>「確定」はスタッフに見せる完成版。難しい印は出ません。公開・スプシ同期・スタッフ用ページはこの確定を使います</li><li>希望のマスに「0」で休み（黒いマス）。その日は作成中に新しく入れられません</li><li>希望を直すと、作成中の同じマスも変わります（作成中で自分で直したマスはそのまま）</li><li>帯の「作成中へ流し込む」で、希望をまとめて作成中に入れられます</li><li>スタッフはスタッフ用ページから希望とメモを出します（同期で入ります）</li></ul>
 <h4>募集・締切・公開</h4><ul><li>希望を表示中に時計のボタン：募集開始・締切、提出状況と要望メモ、リマインド文のコピー</li><li>確定を表示中に「未公開／公開中」のボタン：今すぐ公開、またはアナウンス日を決めて自動公開</li></ul>
 <h4>期間とタブ</h4><ul><li>下のタブは期間ごと。開くと確定が出ます</li><li>＋ から次の半月を作る、過去の期間を開く、今の期間を消す</li></ul>
 <h4>管理</h4><ul><li>スタッフ：役職（空欄＝バイト）、時給、月の必要時間、スタッフ用ページの暗証番号のリセット</li><li>全店サマリー：今の期間の判定、店長・社員のマスト出勤、希望の提出状況</li><li>変更履歴：誰がいつ変えたか、元に戻す</li></ul>
@@ -2009,7 +2009,7 @@ const store = {
     if (this._unsubSI) { try { this._unsubSI(); } catch {} } this._unsubSI = dbApi.doc('syncinfo/' + storeId).onSnapshot(s => { const was = (syncInfo?.newAccounts || []).join(); syncInfo = s.exists ? dataOf(s) : null; const n = (syncInfo?.newAccounts || []).filter(nm => !(config?.staff || []).some(st => st.name === nm)); if (n.length && n.join() !== was) toast('スタッフ用ページで新しく登録した人がいます（管理 › スタッフ）: ' + n.join('、')); if ($('#drStaff')?.classList.contains('open')) renderStaff(); }, e => console.error(e));
     unsubCfg = dbApi.doc('config/' + storeId).onSnapshot(s => { if (!s.exists && s.metadata?.fromCache) return; /* wait for the server before treating the store as empty */ config = s.exists ? dataOf(s) : (storeId === 'ueno' && this.legacyMain ? JSON.parse(JSON.stringify(this.legacyMain)) : null); cfgBase[storeId] = config ? JSON.parse(JSON.stringify(config)) : null; synced(s); this.onChange(); }, e => console.error(e));
   },
-  switchStore(id) {
+  switchStore(id) { try { autoFixRun(); } catch (e) {}
     storeId = id; try { localStorage.setItem(LS_KEY + '-store', id); } catch {}
     cur = null; expanded = new Set(); config = null;
     if (localMode) { config = this._local().configs[id] || null; this.onChange(); return; }
@@ -2039,13 +2039,14 @@ const store = {
     if (!canW()) { toast(online ? '編集できません' : 'オフライン中は閲覧のみです', true); render(); return; } 
     const sh = sheets[id]; if (!sh) return;
     if (sh.phase === 'fixed' && !(opts && opts.force)) { toast(FIXED_RO, true); render(); return; }
-    if (sh.phase === 'wish' && !(opts && opts.noFollow)) { const fw = draftFollow(sh, patch); if (fw) setTimeout(() => store.patchCells(fw.id, fw.patch), 0); }
+    if (sh.phase === 'wish' && !(opts && opts.noFollow)) { const fw = draftFollow(sh, patch); if (fw) setTimeout(() => store.patchCells(fw.id, fw.patch, { noAuto: true }), 0); } /* 希望を直した時の追いかけは、確定へ自動では入れない */
     if (sh.phase === 'draft' && !(opts && opts.allowOff)) { /* 確定の内容に戻すときは、休み希望の日でも確定どおりに戻す */ let nb = 0; for (const k in patch) if (patch[k] && (patch[k].s != null || patch[k].e != null) && wishOffAt(sh, k) && !((sh.cells[k] || {}).s != null || (sh.cells[k] || {}).e != null)) { delete patch[k]; nb++; } /* 空の日に新しく入れるのだけ止める */ if (nb) toast(`希望で休み（黒）の日は入れられません（${nb}件を飛ばしました）`, true); if (!Object.keys(patch).length) { render(); return; } }
     const send = {}; // a cell is always written whole (入り・終わり・役割 together) so two people can never leave a mixed 入り/終わり behind
     for (const k in patch) { const v = patch[k]; send[k] = v ? { s: v.s ?? null, e: v.e ?? null, ld: !!v.ld, cl: v.cl ?? null, off: v.off ?? null } : null; }
     sh.cells = Object.assign({}, sh.cells);
     for (const k in patch) { if (patch[k]) sh.cells[k] = patch[k]; else delete sh.cells[k]; }
     if (isPractice(id)) { render(); return; } // 練習中は保存しない
+    if (sh.phase === 'draft' && !(opts && opts.noAuto)) autoFixTouch(id, patch); /* 自動で確定（2026-11-20） */
     const pend = pendingCells[id] = pendingCells[id] || {}; const mine = {}; for (const k in patch) { mine[k] = patch[k] || null; pend[k] = mine[k]; }
     if (localMode) { const d = this._local(); d.sheets[id] = sh; this._save(d); render(); saveSt('local'); return; }
     render(); saveSt('saving');
@@ -2104,7 +2105,27 @@ const PH_ORD = { wish: 0, draft: 1, fixed: 2 }, PH_LABEL = { wish: '希望', dra
 function sortedSheetIds() { return storeSheets().filter(s => s && typeof s.start === 'string').sort((a, b) => (a.start + (PH_ORD[a.phase] ?? 1)).localeCompare(b.start + (PH_ORD[b.phase] ?? 1))).map(s => s.id); }
 function wishSheetOf(sh) { if (!sh) return null; return sh.phase !== 'wish' ? storeSheets().find(s => s.period === sh.period && s.phase === 'wish') : null; }
 const sibling = (sh, ph) => sh ? storeSheets().find(s => s.period === sh.period && s.phase === ph) || null : null;
-const FIXED_RO = '確定は直接は直せません。「作成中」で直して「確定する」を押してください';
+const FIXED_RO = '確定は直接は直せません。「作成中」で直すと確定にも入ります';
+/* ---- 自動で確定（2026-11-20 オーナー: 作成中を直した後「確定する」を押し忘れがち → 自動で確定を選択）----
+   確定がもうある期間は、作成中で直したマスが2.5秒後に確定にも入る。公開中ならスタッフ用ページにもすぐ出す。
+   ・写すのは、この端末でいま直したマスだけ（前からあるずれは「確定する（n）」に残す。確定の方が新しい時に、古い作成中で上書きしないため）
+   ・入りだけ／終わりだけの途中のマスは、両方そろうか消されるまで待つ
+   ・最初の確定（確定がまだ無い期間）は今までどおり「確定する」。練習用・希望を直した時の追いかけは対象外 */
+const autoFix = { keys: {}, timer: null, pm: null, sync: null };
+function autoFixTouch(draftId, patch) { const d = sheets[draftId]; if (!d || d.phase !== 'draft' || isPractice(draftId) || !sibling(d, 'fixed')) return; const m = autoFix.keys[draftId] = autoFix.keys[draftId] || {}; for (const k in patch) m[k] = 1; clearTimeout(autoFix.timer); autoFix.timer = setTimeout(autoFixRun, 2500); }
+function autoFixRun() { clearTimeout(autoFix.timer); autoFix.timer = null; let n = 0, pub = false; const half = c => !!c && !c.off && (c.s == null) !== (c.e == null);
+  for (const id of Object.keys(autoFix.keys)) { const d = sheets[id], fx = d && sibling(d, 'fixed'), m = autoFix.keys[id]; if (!d || !fx || !canW()) { delete autoFix.keys[id]; continue; }
+    const p = {}, hist = [], t = Date.now();
+    for (const k of Object.keys(m)) { const a = (d.cells || {})[k] || null, b = (fx.cells || {})[k] || null; if (half(a)) continue; /* 途中のマスは待つ */ delete m[k]; if (sameCell(a, b) || (!full(a) && !full(b))) continue; p[k] = a ? JSON.parse(JSON.stringify(a)) : null; hist.push({ t, who: myId, k, from: b, to: a }); }
+    if (!Object.keys(m).length) delete autoFix.keys[id];
+    const c = Object.keys(p).length; if (!c) continue; store.patchCells(fx.id, p, { force: true }); { const u0 = undoing; undoing = true; try { store.appendHistory(fx.id, hist); } finally { undoing = u0; } } /* 確定側の記録は「取り消し」の対象にしない（⌘Z は作成中の操作を戻し、それがまた確定に入る） */ n += c; if (pubState(fx) === 'on') pub = true; }
+  if (!n) return; toast(`確定にも入れました（${n}マス）`); if (pub) autoFixPublish(); }
+function autoFixPublish() { /* 公開中の確定が変わった: ①すぐスタッフ用ページへ（公開設定＋確定シフトだけ・数秒） ②続けて直すのが止まって20秒後に本同期（スプシ）を1回だけ頼む。同期中なら頼まない（15分おきの同期が拾う） */
+  if (localMode || !dbApi || !storeId) return; const sid = storeId;
+  clearTimeout(autoFix.pm); autoFix.pm = setTimeout(async () => { let ok = false; try { for (let i = 0; i < 50 && window.__gasDb && window.__gasDb.inflight > 0; i++) await new Promise(r => setTimeout(r, 200)); const api = window.__gasDb && window.__gasDb.publishMeta; if (!api) return; const r = await api(sid); ok = !!(r && r.ok); } catch (e) { console.warn('publishMeta', e && e.message); }
+    toast(ok ? 'スタッフ用ページに反映しました' : 'スタッフ用ページにまだ出ていません（15分以内に自動で出ます）', !ok); }, 1500);
+  clearTimeout(autoFix.sync); autoFix.sync = setTimeout(async () => { try { if (sid === storeId && syncReq && (syncReq.status === 'req' || syncReq.status === 'run') && Date.now() - Date.parse(syncReq.at) < 10 * 60000) return; await dbApi.doc('syncreq/' + sid).set({ at: new Date().toISOString(), status: 'req', by: '自動で確定' }); kickCloudSync(sid); } catch (e) {} }, 20000); }
+document.addEventListener('visibilitychange', () => { if (document.hidden) { try { autoFixRun(); } catch (e) {} } }); addEventListener('pagehide', () => { try { autoFixRun(); } catch (e) {} }); /* アプリを閉じる・切り替える時は待たずに入れる */
 async function ensureDraft(sh) { /* 作成中がなければ、確定（なければ空）から作る。確定は「確定する」を押すまで変わらない（オーナー指示） */
   const ex = sibling(sh, 'draft'); if (ex) return ex; if (!canW()) { toast('閲覧のみのため作れません', true); return null; }
   const base = sibling(sh, 'fixed') || sh; const cp = o => JSON.parse(JSON.stringify(o || {}));
@@ -3595,7 +3616,7 @@ $('#btnCopyWish').onclick = async e => {
   const fid = sh.id;
   const wishCells = Object.keys(w.cells).filter(k => full(w.cells[k]));
   const fillN = wishCells.filter(k => !full(sh.cells[k])).length, overN = wishCells.filter(k => full(sh.cells[k]) && !sameCell(sh.cells[k], w.cells[k])).length, ppl = new Set(wishCells.map(k => k.split('|')[0])).size, dys = new Set(wishCells.map(k => k.split('|')[1])).size;
-  popover(anchor, `<b>希望を作成中へ流し込む</b><div class="hint">希望 ${ppl}人・${dys}日分（${wishCells.length}コマ）を作成中へ入れて、作成中を開きます。確定は「確定する」を押すまで変わりません。</div><div class="pourn"><span>空いているマスに入る <b>${fillN}</b>件</span><span>作成中と違うマス <b class="${overN ? 'warnn' : ''}">${overN}</b>件</span></div><div class="hint">「空セルだけ埋める」は作成中に入っているマスをそのままにします。「全て上書き」は違うマス${overN}件も希望で置き換えます。あとで「管理 › 変更履歴」から戻せます。</div><div class="row"><button class="btn small" data-m="fill">空セルだけ埋める</button><button class="btn small danger" data-m="all">全て上書き</button></div>`, pop => {
+  popover(anchor, `<b>希望を作成中へ流し込む</b><div class="hint">希望 ${ppl}人・${dys}日分（${wishCells.length}コマ）を作成中へ入れて、作成中を開きます。${(() => { const fx = sibling(sh, 'fixed'); return !fx ? '確定は「確定する」を押すまで変わりません。' : '<b style="color:#b45309">確定にもそのまま入ります' + (pubState(fx) === 'on' ? '（公開中：スタッフにも見えます）' : '') + '。</b>'; })()}</div><div class="pourn"><span>空いているマスに入る <b>${fillN}</b>件</span><span>作成中と違うマス <b class="${overN ? 'warnn' : ''}">${overN}</b>件</span></div><div class="hint">「空セルだけ埋める」は作成中に入っているマスをそのままにします。「全て上書き」は違うマス${overN}件も希望で置き換えます。あとで「管理 › 変更履歴」から戻せます。</div><div class="row"><button class="btn small" data-m="fill">空セルだけ埋める</button><button class="btn small danger" data-m="all">全て上書き</button></div>`, pop => {
     pop.querySelectorAll('button[data-m]').forEach(b => b.onclick = () => {
       const patch = {}, hist = []; const all = b.dataset.m === 'all';
       const keys = new Set([...wishCells, ...(all ? Object.keys(sh.cells) : [])]);
